@@ -8,7 +8,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -21,7 +20,11 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidUtil;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.ScheduledTickAccess;
 
 import javax.annotation.Nullable;
 
@@ -56,10 +59,11 @@ public class GaugeBlock extends Block {
     // show the contents of the tank behind in the action bar
     if (!level.isClientSide()) {
       Direction side = state.getValue(FACING);
-      IFluidHandler handler = level.getCapability(Capabilities.FluidHandler.BLOCK, pos.relative(side.getOpposite()), side);
-      if (handler != null && handler.getTanks() > 0) {
-        FluidStack fluid = handler.getFluidInTank(0);
-        player.displayClientMessage(fluid.isEmpty() ? FluidText.capacity(handler.getTankCapacity(0)) : FluidText.contents(fluid, handler.getTankCapacity(0)), true);
+      ResourceHandler<FluidResource> handler = level.getCapability(Capabilities.Fluid.BLOCK, pos.relative(side.getOpposite()), side);
+      if (handler != null && handler.size() > 0) {
+        FluidStack fluid = FluidUtil.getStack(handler, 0);
+        int capacity = handler.getCapacityAsInt(0, FluidResource.EMPTY);
+        player.displayClientMessage(fluid.isEmpty() ? FluidText.capacity(capacity) : FluidText.contents(fluid, capacity), true);
       }
     }
     return InteractionResult.SUCCESS;
@@ -74,7 +78,7 @@ public class GaugeBlock extends Block {
   protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
     if (level instanceof Level world) {
       Direction direction = state.getValue(FACING);
-      return world.getCapability(Capabilities.FluidHandler.BLOCK, pos.relative(direction.getOpposite()), direction) != null;
+      return world.getCapability(Capabilities.Fluid.BLOCK, pos.relative(direction.getOpposite()), direction) != null;
     }
     // no capabilities during worldgen
     return true;
@@ -94,7 +98,7 @@ public class GaugeBlock extends Block {
   }
 
   @Override
-  protected BlockState updateShape(BlockState state, Direction facing, BlockState facingState, LevelAccessor level, BlockPos pos, BlockPos facingPos) {
+  protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks, BlockPos pos, Direction facing, BlockPos facingPos, BlockState facingState, RandomSource random) {
     return facing.getOpposite() == state.getValue(FACING) && !state.canSurvive(level, pos) ? Blocks.AIR.defaultBlockState() : state;
   }
 

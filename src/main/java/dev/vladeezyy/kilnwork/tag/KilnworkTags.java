@@ -2,7 +2,7 @@ package dev.vladeezyy.kilnwork.tag;
 
 import dev.vladeezyy.kilnwork.Kilnwork;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
@@ -37,7 +37,7 @@ public final class KilnworkTags {
     public static final TagKey<Fluid> POTION = common("potion");
 
     private static TagKey<Fluid> common(String name) {
-      return TagKey.create(Registries.FLUID, ResourceLocation.fromNamespaceAndPath("c", name));
+      return TagKey.create(Registries.FLUID, Identifier.fromNamespaceAndPath("c", name));
     }
   }
 }

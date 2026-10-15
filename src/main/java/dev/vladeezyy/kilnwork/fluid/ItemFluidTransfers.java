@@ -8,7 +8,7 @@ import dev.vladeezyy.kilnwork.Kilnwork;
 import dev.vladeezyy.kilnwork.tag.TagPreference;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.tags.TagKey;
@@ -19,8 +19,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -36,17 +37,17 @@ import java.util.Optional;
  * {@code fill_item} takes fluid out of the tank into the item, {@code empty_item} puts the fluid of the item into the tank.
  * The fluid is either {@code "fluid": "<id>"} or {@code "tag": "<fluid tag>"}; transfers whose fluid does not exist are skipped.
  */
-public class ItemFluidTransfers extends SimpleJsonResourceReloadListener {
+public class ItemFluidTransfers extends SimpleJsonResourceReloadListener<JsonElement> {
   public static final ItemFluidTransfers INSTANCE = new ItemFluidTransfers();
 
   private List<Transfer> transfers = List.of();
 
   private ItemFluidTransfers() {
-    super(new com.google.gson.Gson(), "kilnwork/fluid_transfer");
+    super(net.minecraft.util.ExtraCodecs.JSON, net.minecraft.resources.FileToIdConverter.json("kilnwork/fluid_transfer"));
   }
 
   @Override
-  protected void apply(Map<ResourceLocation, JsonElement> jsons, ResourceManager manager, ProfilerFiller profiler) {
+  protected void apply(Map<Identifier, JsonElement> jsons, ResourceManager manager, ProfilerFiller profiler) {
     List<Transfer> list = new ArrayList<>();
     jsons.forEach((id, json) -> Transfer.CODEC.parse(JsonOps.INSTANCE, json)
       .resultOrPartial(error -> Kilnwork.LOG.error("Failed to parse fluid transfer {}: {}", id, error))
@@ -71,7 +72,7 @@ public class ItemFluidTransfers extends SimpleJsonResourceReloadListener {
    * @return  Result, or null if nothing matched
    */
   @Nullable
-  public Result transfer(ItemStack stack, IFluidHandler tank) {
+  public Result transfer(ItemStack stack, ResourceHandler<FluidResource> tank) {
     for (Transfer transfer : transfers) {
       if (transfer.input.test(stack)) {
         Result result = transfer.run(tank);
@@ -122,25 +123,32 @@ public class ItemFluidTransfers extends SimpleJsonResourceReloadListener {
   private record Transfer(Type type, Ingredient input, FluidSource fluid, Item result) {
     static final Codec<Transfer> CODEC = RecordCodecBuilder.create(inst -> inst.group(
       Type.CODEC.fieldOf("type").forGetter(Transfer::type),
-      Ingredient.CODEC_NONEMPTY.fieldOf("input").forGetter(Transfer::input),
+      Ingredient.CODEC.fieldOf("input").forGetter(Transfer::input),
       FluidSource.CODEC.fieldOf("fluid").forGetter(Transfer::fluid),
       BuiltInRegistries.ITEM.byNameCodec().fieldOf("result").forGetter(Transfer::result)
     ).apply(inst, Transfer::new));
 
     @Nullable
-    Result run(IFluidHandler tank) {
-      if (type == Type.FILL_ITEM) {
-        FluidStack inTank = tank.drain(fluid.amount(), FluidAction.SIMULATE);
-        if (inTank.getAmount() == fluid.amount() && fluid.matches(inTank)) {
-          return new Result(new ItemStack(result), tank.drain(inTank, FluidAction.EXECUTE), true);
-        }
-      } else {
-        Optional<Fluid> source = fluid.get();
-        if (source.isPresent()) {
-          FluidStack stack = new FluidStack(source.get(), fluid.amount());
-          if (tank.fill(stack, FluidAction.SIMULATE) == fluid.amount()) {
-            tank.fill(stack.copy(), FluidAction.EXECUTE);
-            return new Result(new ItemStack(result), stack, false);
+    Result run(ResourceHandler<FluidResource> tank) {
+      try (Transaction tx = Transaction.openRoot()) {
+        if (type == Type.FILL_ITEM) {
+          // take the fluid out of any slot of the tank that matches
+          for (int i = 0; i < tank.size(); i++) {
+            FluidResource resource = tank.getResource(i);
+            if (!resource.isEmpty() && fluid.matches(resource.toStack(1))
+                && tank.extract(resource, fluid.amount(), tx) == fluid.amount()) {
+              tx.commit();
+              return new Result(new ItemStack(result), resource.toStack(fluid.amount()), true);
+            }
+          }
+        } else {
+          Optional<Fluid> source = fluid.get();
+          if (source.isPresent()) {
+            FluidResource resource = FluidResource.of(source.get());
+            if (tank.insert(resource, fluid.amount(), tx) == fluid.amount()) {
+              tx.commit();
+              return new Result(new ItemStack(result), resource.toStack(fluid.amount()), false);
+            }
           }
         }
       }

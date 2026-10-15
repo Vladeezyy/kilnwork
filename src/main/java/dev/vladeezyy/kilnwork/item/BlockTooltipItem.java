@@ -5,9 +5,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.block.Block;
 
-import java.util.List;
+import java.util.function.Consumer;
 
 /** Block item with a gray tooltip from the {@code <description id>.tooltip} translation */
 public class BlockTooltipItem extends BlockItem {
@@ -16,8 +17,8 @@ public class BlockTooltipItem extends BlockItem {
   }
 
   @Override
-  public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-    tooltip.add(Component.translatable(getDescriptionId() + ".tooltip").withStyle(ChatFormatting.GRAY));
-    super.appendHoverText(stack, context, tooltip, flag);
+  public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
+    tooltip.accept(Component.translatable(getDescriptionId() + ".tooltip").withStyle(ChatFormatting.GRAY));
+    super.appendHoverText(stack, context, display, tooltip, flag);
   }
 }

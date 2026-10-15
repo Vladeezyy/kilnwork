@@ -1,6 +1,6 @@
 package dev.vladeezyy.kilnwork.registration;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -13,11 +13,13 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.Locale;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * Registers blocks together with their items
+ * Registers blocks together with their items. Since 1.21.2 block and item properties carry their id, so blocks are
+ * created from a properties supplier and items from a factory taking the block and the item properties.
  */
 public class BlockRegister {
   private final DeferredRegister.Blocks blocks;
@@ -40,49 +42,50 @@ public class BlockRegister {
 
   /** Renames a block and its item, so worlds with the old id still load */
   public void addAlias(String from, String to) {
-    ResourceLocation fromId = ResourceLocation.fromNamespaceAndPath(blocks.getNamespace(), from);
-    ResourceLocation toId = ResourceLocation.fromNamespaceAndPath(blocks.getNamespace(), to);
+    Identifier fromId = Identifier.fromNamespaceAndPath(blocks.getNamespace(), from);
+    Identifier toId = Identifier.fromNamespaceAndPath(blocks.getNamespace(), to);
     blocks.addAlias(fromId, toId);
     items.addAlias(fromId, toId);
   }
 
+  /** Creates the item of a block */
+  @FunctionalInterface
+  public interface BlockItemFactory<B extends Block> {
+    BlockItem create(B block, Item.Properties properties);
+  }
+
+  /** Default block item */
+  public static BlockItem blockItem(Block block, Item.Properties properties) {
+    return new BlockItem(block, properties);
+  }
+
   /** Registers a block without an item */
-  public <B extends Block> DeferredBlock<B> registerNoItem(String name, Supplier<? extends B> block) {
-    return blocks.register(name, block);
+  public <B extends Block> DeferredBlock<B> registerNoItem(String name, Function<BlockBehaviour.Properties, ? extends B> block, Supplier<BlockBehaviour.Properties> properties) {
+    return blocks.registerBlock(name, block, properties);
   }
 
   /** Registers a block and its item */
-  public <B extends Block> DeferredBlock<B> register(String name, Supplier<? extends B> block, Function<? super B, ? extends BlockItem> item) {
-    DeferredBlock<B> holder = blocks.register(name, block);
-    items.register(name, () -> item.apply(holder.get()));
+  public <B extends Block> DeferredBlock<B> register(String name, Function<BlockBehaviour.Properties, ? extends B> block, Supplier<BlockBehaviour.Properties> properties, BlockItemFactory<? super B> item) {
+    DeferredBlock<B> holder = blocks.registerBlock(name, block, properties);
+    items.registerItem(name, props -> item.create(holder.get(), props.useBlockDescriptionPrefix()), Item.Properties::new);
     return holder;
   }
 
-  /** Registers a plain block from properties and its item */
-  public DeferredBlock<Block> register(String name, BlockBehaviour.Properties props, Function<? super Block, ? extends BlockItem> item) {
-    return register(name, () -> new Block(props), item);
-  }
-
   /** Registers one block per enum value, named {@code <value>_<name>} */
-  public <E extends Enum<E>, B extends Block> EnumObject<E, B> registerEnum(E[] values, String name, Function<E, ? extends B> block, Function<? super B, ? extends BlockItem> item) {
+  public <E extends Enum<E>, B extends Block> EnumObject<E, B> registerEnum(E[] values, String name, BiFunction<E, BlockBehaviour.Properties, ? extends B> block, Function<E, BlockBehaviour.Properties> properties, BlockItemFactory<? super B> item) {
     EnumObject.Builder<E, B> builder = EnumObject.builder(values[0].getDeclaringClass());
     for (E value : values) {
-      builder.put(value, this.<B>register(value.name().toLowerCase(Locale.ROOT) + '_' + name, () -> block.apply(value), item));
+      builder.put(value, this.<B>register(value.name().toLowerCase(Locale.ROOT) + '_' + name, props -> block.apply(value, props), () -> properties.apply(value), item));
     }
     return builder.build();
   }
 
   /** Registers a block with slab ({@code _slab}), stairs ({@code _stairs}) and wall ({@code _wall}) */
-  public BuildingBlocks registerBuilding(String name, BlockBehaviour.Properties props, Function<? super Block, ? extends BlockItem> item) {
-    DeferredBlock<Block> block = register(name, () -> new Block(props), item);
-    DeferredBlock<SlabBlock> slab = register(name + "_slab", () -> new SlabBlock(props), item);
-    DeferredBlock<StairBlock> stairs = register(name + "_stairs", () -> new StairBlock(block.get().defaultBlockState(), props), item);
-    DeferredBlock<WallBlock> wall = register(name + "_wall", () -> new WallBlock(props), item);
+  public BuildingBlocks registerBuilding(String name, Supplier<BlockBehaviour.Properties> properties, BlockItemFactory<Block> item) {
+    DeferredBlock<Block> block = register(name, Block::new, properties, item);
+    DeferredBlock<SlabBlock> slab = register(name + "_slab", SlabBlock::new, properties, item);
+    DeferredBlock<StairBlock> stairs = register(name + "_stairs", props -> new StairBlock(block.get().defaultBlockState(), props), properties, item);
+    DeferredBlock<WallBlock> wall = register(name + "_wall", WallBlock::new, properties, item);
     return new BuildingBlocks(block, slab, stairs, wall);
-  }
-
-  /** Default block item */
-  public static BlockItem blockItem(Block block) {
-    return new BlockItem(block, new Item.Properties());
   }
 }

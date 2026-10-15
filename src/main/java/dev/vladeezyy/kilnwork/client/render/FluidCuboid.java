@@ -25,9 +25,10 @@ public final class FluidCuboid {
     }
   }
 
+  private static final Codec<Vector3f> VECTOR = ExtraCodecs.VECTOR3F.xmap(Vector3f::new, vector -> vector);
   public static final Codec<FluidCuboid> CODEC = RecordCodecBuilder.create(inst -> inst.group(
-    ExtraCodecs.VECTOR3F.fieldOf("from").forGetter(FluidCuboid::getFrom),
-    ExtraCodecs.VECTOR3F.fieldOf("to").forGetter(FluidCuboid::getTo),
+    VECTOR.fieldOf("from").forGetter(FluidCuboid::getFrom),
+    VECTOR.fieldOf("to").forGetter(FluidCuboid::getTo),
     Codec.unboundedMap(Direction.CODEC, FluidFace.CODEC).optionalFieldOf("faces", ALL_FACES).forGetter(FluidCuboid::getFaces)
   ).apply(inst, FluidCuboid::new));
   /** One cuboid or a list of them */

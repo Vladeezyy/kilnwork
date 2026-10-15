@@ -5,33 +5,37 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import dev.vladeezyy.kilnwork.client.render.FluidCuboid.FluidFace;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.inventory.InventoryMenu;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.data.AtlasIds;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.BlockGetter;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Draws fluid cuboids in block entity renderers. Based on Mantle's FluidRenderer (MIT, SlimeKnights), with texture
- * coordinates for 1.21 (0-1 sprite fractions) and the vanilla translucent entity render type instead of a custom shader.
+ * coordinates for 1.21 (0-1 sprite fractions) and the vanilla translucent item entity render type. Since 1.21.9 block
+ * entity renderers submit geometry to a {@link SubmitNodeCollector} instead of drawing directly.
  */
 public final class FluidCuboidRenderer {
   private FluidCuboidRenderer() {}
 
-  /** Buffer to draw fluids into */
-  public static VertexConsumer getBuffer(MultiBufferSource buffers) {
-    return buffers.getBuffer(RenderType.entityTranslucentCull(InventoryMenu.BLOCK_ATLAS));
-  }
+  /** Render type fluids are drawn with */
+  public static final RenderType RENDER_TYPE = RenderTypes.itemEntityTranslucentCull(TextureAtlas.LOCATION_BLOCKS);
 
   /** Sprite of the block atlas */
-  public static TextureAtlasSprite getBlockSprite(ResourceLocation sprite) {
-    return Minecraft.getInstance().getModelManager().getAtlas(InventoryMenu.BLOCK_ATLAS).getSprite(sprite);
+  public static TextureAtlasSprite getBlockSprite(Identifier sprite) {
+    return Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(AtlasIds.BLOCKS).getSprite(sprite);
   }
 
   /** Raises the block light of the packed light to at least the given 0-15 value, for glowing fluids */
@@ -52,6 +56,41 @@ public final class FluidCuboidRenderer {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Submits a fluid cuboid between the given points (block units) at the current pose
+   * @param isGas  Flips the textures
+   */
+  public static void submitCuboid(PoseStack matrices, SubmitNodeCollector collector, FluidCuboid cube, TextureAtlasSprite still, TextureAtlasSprite flowing, Vector3f from, Vector3f to, int color, int light, boolean isGas) {
+    Vector3f start = new Vector3f(from);
+    Vector3f end = new Vector3f(to);
+    collector.submitCustomGeometry(matrices, RENDER_TYPE, (pose, buffer) -> renderCuboid(pose, buffer, cube, still, flowing, start, end, color, light, isGas));
+  }
+
+  /** Submits a fluid cuboid at its own size, moved up or down by the offset */
+  public static void submitCuboid(PoseStack matrices, SubmitNodeCollector collector, FluidCuboid cube, float yOffset, TextureAtlasSprite still, TextureAtlasSprite flowing, int color, int light, boolean isGas) {
+    if (yOffset != 0) {
+      matrices.pushPose();
+      matrices.translate(0, yOffset, 0);
+    }
+    submitCuboid(matrices, collector, cube, still, flowing, cube.getFromScaled(), cube.getToScaled(), color, light, isGas);
+    if (yOffset != 0) {
+      matrices.popPose();
+    }
+  }
+
+  /** Draws the faces of a cuboid into a buffer */
+  public static void renderCuboid(PoseStack.Pose pose, VertexConsumer buffer, FluidCuboid cube, TextureAtlasSprite still, TextureAtlasSprite flowing, Vector3f from, Vector3f to, int color, int light, boolean isGas) {
+    int rotation = isGas ? 180 : 0;
+    for (Direction dir : Direction.values()) {
+      FluidFace face = cube.getFace(dir);
+      if (face != null) {
+        boolean isFlowing = face.isFlowing();
+        int faceRot = (rotation + face.rotation()) % 360;
+        putTexturedQuad(buffer, pose, isFlowing ? flowing : still, from, to, dir, color, light, faceRot, isFlowing);
+      }
+    }
   }
 
   /**
@@ -228,72 +267,31 @@ public final class FluidCuboidRenderer {
   }
 
   /**
-   * Renders a full fluid cuboid for the given data
-   * @param matrices  Matrix stack instance
-   * @param buffer    Buffer type
-   * @param still     Still sprite
-   * @param flowing   Flowing sprite
-   * @param cube      Fluid cuboid
-   * @param from      Fluid start
-   * @param to        Fluid end
-   * @param color     Fluid color
-   * @param light     Quad lighting
-   * @param isGas     If true, fluid is a gas
+   * Collects the fluid cuboids below a faucet or channel, from {@link KilnworkFluidModels#FAUCET_FLUIDS}. Call while
+   * extracting the render state, the level is not available when submitting.
+   * @return  Cuboids for each block below, index 0 is one block down
    */
-  public static void renderCuboid(PoseStack matrices, VertexConsumer buffer, FluidCuboid cube, TextureAtlasSprite still, TextureAtlasSprite flowing, Vector3f from, Vector3f to, int color, int light, boolean isGas) {
-    PoseStack.Pose pose = matrices.last();
-    int rotation = isGas ? 180 : 0;
-    for (Direction dir : Direction.values()) {
-      FluidFace face = cube.getFace(dir);
-      if (face != null) {
-        boolean isFlowing = face.isFlowing();
-        int faceRot = (rotation + face.rotation()) % 360;
-        putTexturedQuad(buffer, pose, isFlowing ? flowing : still, from, to, dir, color, light, faceRot, isFlowing);
-      }
-    }
-  }
-
-  /**
-   * Renders a fluid cuboid with the given offset, used to manually place cuboids from a list for rendering renderCuboids in Mantle
-   * @param matrices  Matrix stack instance
-   * @param buffer    Buffer type
-   * @param cube      Fluid cuboid
-   * @param yOffset   Amount to offset the cube in the Y direction, used in faucets for rendering fluid in lower block
-   * @param still     Still sprite
-   * @param flowing   Flowing sprite
-   * @param color     Fluid color
-   * @param light     Quad lighting from TER
-   * @param isGas     If true, fluid is a gas
-   */
-  public static void renderCuboid(PoseStack matrices, VertexConsumer buffer, FluidCuboid cube, float yOffset, TextureAtlasSprite still, TextureAtlasSprite flowing, int color, int light, boolean isGas) {
-    if (yOffset != 0) {
-      matrices.pushPose();
-      matrices.translate(0, yOffset, 0);
-    }
-    renderCuboid(matrices, buffer, cube, still, flowing, cube.getFromScaled(), cube.getToScaled(), color, light, isGas);
-    if (yOffset != 0) {
-      matrices.popPose();
-    }
-  }
-
-  /**
-   * Draws the stream of a faucet or channel into the block(s) below, using {@link KilnworkFluidModels#FAUCET_FLUIDS}
-   * @param world      Level
-   * @param pos        Position of the faucet
-   * @param direction  Facing of the faucet, down for a straight stream
-   */
-  public static void renderFaucetFluids(LevelAccessor world, BlockPos pos, Direction direction, PoseStack matrices, VertexConsumer buffer, TextureAtlasSprite still, TextureAtlasSprite flowing, int color, int light) {
-    int i = 0;
+  public static List<List<FluidCuboid>> collectFaucetFluids(BlockGetter level, BlockPos pos, Direction direction) {
+    List<List<FluidCuboid>> list = new ArrayList<>();
     FaucetFluid faucetFluid;
+    int i = 0;
     do {
       i++;
-      faucetFluid = KilnworkFluidModels.FAUCET_FLUIDS.get(world.getBlockState(pos.below(i)));
+      faucetFluid = KilnworkFluidModels.FAUCET_FLUIDS.get(level.getBlockState(pos.below(i)));
+      list.add(faucetFluid.getFluids(direction));
+    } while (faucetFluid.isContinued() && i < 16);
+    return list;
+  }
+
+  /** Submits the fluid collected by {@link #collectFaucetFluids(BlockGetter, BlockPos, Direction)} */
+  public static void submitFaucetFluids(List<List<FluidCuboid>> fluids, PoseStack matrices, SubmitNodeCollector collector, TextureAtlasSprite still, TextureAtlasSprite flowing, int color, int light) {
+    for (int i = 0; i < fluids.size(); i++) {
       matrices.pushPose();
-      matrices.translate(0, -i, 0);
-      for (FluidCuboid cube : faucetFluid.getFluids(direction)) {
-        renderCuboid(matrices, buffer, cube, still, flowing, cube.getFromScaled(), cube.getToScaled(), color, light, false);
+      matrices.translate(0, -(i + 1), 0);
+      for (FluidCuboid cube : fluids.get(i)) {
+        submitCuboid(matrices, collector, cube, still, flowing, cube.getFromScaled(), cube.getToScaled(), color, light, false);
       }
       matrices.popPose();
-    } while (faucetFluid.isContinued() && i < 16);
+    }
   }
 }

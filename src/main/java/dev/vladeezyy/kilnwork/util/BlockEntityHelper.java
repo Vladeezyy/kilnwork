@@ -29,6 +29,6 @@ public final class BlockEntityHelper {
   @Nullable
   @SuppressWarnings("unchecked")
   public static <E extends BlockEntity, A extends BlockEntity> BlockEntityTicker<A> serverTicker(Level level, BlockEntityType<A> type, BlockEntityType<E> expected, BlockEntityTicker<? super E> ticker) {
-    return !level.isClientSide && type == expected ? (BlockEntityTicker<A>) ticker : null;
+    return !level.isClientSide() && type == expected ? (BlockEntityTicker<A>) ticker : null;
   }
 }

@@ -1,7 +1,6 @@
 package dev.vladeezyy.kilnwork.client;
 
 import dev.vladeezyy.kilnwork.Kilnwork;
-import dev.vladeezyy.kilnwork.client.model.ModelHelpers;
 import dev.vladeezyy.kilnwork.client.render.KilnworkFluidModels;
 import dev.vladeezyy.kilnwork.fluid.FluidText;
 import dev.vladeezyy.kilnwork.tag.KilnworkTags;
@@ -11,7 +10,6 @@ import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -21,11 +19,14 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidUtil;
+import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -33,17 +34,15 @@ import java.util.List;
 import java.util.Optional;
 
 /** Client side of Kilnwork: data loaders and the gauge tooltip */
-@SuppressWarnings("removal")
-@EventBusSubscriber(modid = Kilnwork.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Kilnwork.MOD_ID, value = Dist.CLIENT)
 public final class KilnworkClient {
   private KilnworkClient() {}
 
   @SubscribeEvent
-  static void registerReloadListeners(RegisterClientReloadListenersEvent event) {
-    event.registerReloadListener(KilnworkFluidModels.BLOCK_FLUIDS);
-    event.registerReloadListener(KilnworkFluidModels.FAUCET_FLUIDS);
-    event.registerReloadListener(KilnworkFluidModels.CHANNEL_FLUIDS);
-    event.registerReloadListener((ResourceManagerReloadListener) manager -> ModelHelpers.clearCache());
+  static void registerReloadListeners(AddClientReloadListenersEvent event) {
+    event.addListener(Kilnwork.id("block_fluids"), KilnworkFluidModels.BLOCK_FLUIDS);
+    event.addListener(Kilnwork.id("faucet_fluids"), KilnworkFluidModels.FAUCET_FLUIDS);
+    event.addListener(Kilnwork.id("channel_fluids"), KilnworkFluidModels.CHANNEL_FLUIDS);
     NeoForge.EVENT_BUS.addListener(KilnworkClient::renderGaugeTooltip);
   }
 
@@ -80,12 +79,12 @@ public final class KilnworkClient {
     if (fluidBlock.is(KilnworkTags.Blocks.GAUGE_BLACKLIST)) {
       return;
     }
-    IFluidHandler handler = minecraft.level.getCapability(Capabilities.FluidHandler.BLOCK, fluidPos, side);
-    if (handler == null || handler.getTanks() <= 0) {
+    ResourceHandler<FluidResource> handler = minecraft.level.getCapability(Capabilities.Fluid.BLOCK, fluidPos, side);
+    if (handler == null || handler.size() <= 0) {
       return;
     }
-    FluidStack fluid = handler.getFluidInTank(0);
-    int capacity = handler.getTankCapacity(0);
+    FluidStack fluid = FluidUtil.getStack(handler, 0);
+    int capacity = handler.getCapacityAsInt(0, FluidResource.EMPTY);
     List<Component> tooltip = new ArrayList<>(3);
     if (fluid.isEmpty()) {
       tooltip.add(FluidText.capacity(capacity));
@@ -99,6 +98,6 @@ public final class KilnworkClient {
     }
     int x = minecraft.getWindow().getGuiScaledWidth() / 2;
     int y = minecraft.getWindow().getGuiScaledHeight() / 2;
-    event.getGuiGraphics().renderTooltip(minecraft.font, tooltip, Optional.empty(), x, y);
+    event.getGuiGraphics().setTooltipForNextFrame(minecraft.font, tooltip, Optional.empty(), ItemStack.EMPTY, x, y);
   }
 }

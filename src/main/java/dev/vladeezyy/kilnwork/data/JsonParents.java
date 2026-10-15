@@ -3,7 +3,7 @@ package dev.vladeezyy.kilnwork.data;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.GsonHelper;
 
 import java.util.ArrayList;
@@ -22,15 +22,15 @@ public final class JsonParents {
    * @param location  Location of the JSON that was finally used
    * @param json      JSON with all parent data
    */
-  public record Resolved(ResourceLocation location, JsonObject json) {}
+  public record Resolved(Identifier location, JsonObject json) {}
 
-  public static Resolved resolve(Map<ResourceLocation, JsonElement> jsons, ResourceLocation location, JsonObject json) {
+  public static Resolved resolve(Map<Identifier, JsonElement> jsons, Identifier location, JsonObject json) {
     return resolve(jsons, location, json.deepCopy(), new ArrayList<>());
   }
 
-  private static Resolved resolve(Map<ResourceLocation, JsonElement> jsons, ResourceLocation location, JsonObject json, List<ResourceLocation> stack) {
+  private static Resolved resolve(Map<Identifier, JsonElement> jsons, Identifier location, JsonObject json, List<Identifier> stack) {
     while (json.has("parent")) {
-      ResourceLocation parentId = ResourceLocation.parse(GsonHelper.getAsString(json, "parent"));
+      Identifier parentId = Identifier.parse(GsonHelper.getAsString(json, "parent"));
       stack.add(location);
       if (stack.contains(parentId)) {
         throw new JsonSyntaxException("Parent loop at " + parentId + ": " + stack);

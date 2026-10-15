@@ -7,7 +7,7 @@ import dev.vladeezyy.kilnwork.Kilnwork;
 import dev.vladeezyy.kilnwork.data.BlockStateDataLoader;
 import dev.vladeezyy.kilnwork.data.JsonParents;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -26,7 +26,7 @@ import java.util.Map;
  */
 public record FaucetFluid(List<FluidCuboid> side, List<FluidCuboid> center, boolean isContinued) {
   public static final FaucetFluid EMPTY = new FaucetFluid(List.of(), List.of(), false);
-  private static final ResourceLocation DEFAULT = Kilnwork.id("_default");
+  private static final Identifier DEFAULT = Kilnwork.id("_default");
 
   /** Cuboids for the given faucet direction */
   public List<FluidCuboid> getFluids(Direction direction) {
@@ -42,7 +42,7 @@ public record FaucetFluid(List<FluidCuboid> side, List<FluidCuboid> center, bool
     }
 
     @Override
-    protected void prepare(Map<ResourceLocation, JsonElement> jsons) {
+    protected void prepare(Map<Identifier, JsonElement> jsons) {
       defaultValue = EMPTY;
       JsonElement json = jsons.get(DEFAULT);
       if (json == null) {
@@ -53,7 +53,7 @@ public record FaucetFluid(List<FluidCuboid> side, List<FluidCuboid> center, bool
     }
 
     @Override
-    protected FaucetFluid parse(Map<ResourceLocation, JsonElement> jsons, ResourceLocation id, JsonElement element) {
+    protected FaucetFluid parse(Map<Identifier, JsonElement> jsons, Identifier id, JsonElement element) {
       JsonObject json = JsonParents.resolve(jsons, id, GsonHelper.convertToJsonObject(element, id.toString())).json();
       return read(json, defaultValue);
     }

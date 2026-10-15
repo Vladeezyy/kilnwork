@@ -3,12 +3,12 @@ package dev.vladeezyy.kilnwork;
 import dev.vladeezyy.kilnwork.fluid.ItemFluidTransfers;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,13 +24,13 @@ public class Kilnwork {
     NeoForge.EVENT_BUS.addListener(Kilnwork::addReloadListeners);
   }
 
-  private static void addReloadListeners(AddReloadListenerEvent event) {
-    event.addListener(ItemFluidTransfers.INSTANCE);
+  private static void addReloadListeners(AddServerReloadListenersEvent event) {
+    event.addListener(id("fluid_transfers"), ItemFluidTransfers.INSTANCE);
   }
 
   /** Location in the Kilnwork namespace */
-  public static ResourceLocation id(String path) {
-    return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
+  public static Identifier id(String path) {
+    return Identifier.fromNamespaceAndPath(MOD_ID, path);
   }
 
   /** Translation key in the Kilnwork namespace, such as {@code gui.kilnwork.fluid.contents} */

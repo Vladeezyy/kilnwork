@@ -41,7 +41,7 @@ public final class FluidText {
 
   /** Name of the mod adding the fluid, blue and italic as in vanilla tooltips */
   public static Component modName(FluidStack fluid) {
-    String namespace = fluid.getFluidHolder().unwrapKey().map(key -> key.location().getNamespace()).orElse("minecraft");
+    String namespace = fluid.getFluidHolder().unwrapKey().map(key -> key.identifier().getNamespace()).orElse("minecraft");
     String name = net.neoforged.fml.ModList.get().getModContainerById(namespace).map(mod -> mod.getModInfo().getDisplayName()).orElse(namespace);
     return Component.literal(name).withStyle(ChatFormatting.BLUE, ChatFormatting.ITALIC);
   }
