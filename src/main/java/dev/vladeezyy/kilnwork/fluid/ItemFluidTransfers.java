@@ -3,6 +3,7 @@ package dev.vladeezyy.kilnwork.fluid;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
+import net.minecraft.core.RegistryAccess;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.vladeezyy.kilnwork.Kilnwork;
 import dev.vladeezyy.kilnwork.tag.TagPreference;
@@ -41,6 +42,8 @@ public class ItemFluidTransfers extends SimpleJsonResourceReloadListener<JsonEle
   public static final ItemFluidTransfers INSTANCE = new ItemFluidTransfers();
 
   private List<Transfer> transfers = List.of();
+  /** Registries for parsing, since 1.21.2 ingredients are holder sets and need registry ops */
+  private RegistryAccess registries = RegistryAccess.EMPTY;
 
   private ItemFluidTransfers() {
     super(net.minecraft.util.ExtraCodecs.JSON, net.minecraft.resources.FileToIdConverter.json("kilnwork/fluid_transfer"));
@@ -49,10 +52,16 @@ public class ItemFluidTransfers extends SimpleJsonResourceReloadListener<JsonEle
   @Override
   protected void apply(Map<Identifier, JsonElement> jsons, ResourceManager manager, ProfilerFiller profiler) {
     List<Transfer> list = new ArrayList<>();
-    jsons.forEach((id, json) -> Transfer.CODEC.parse(JsonOps.INSTANCE, json)
+    jsons.forEach((id, json) -> Transfer.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), json)
       .resultOrPartial(error -> Kilnwork.LOG.error("Failed to parse fluid transfer {}: {}", id, error))
       .ifPresent(list::add));
     transfers = List.copyOf(list);
+  }
+
+  /** Sets the registries before the reload, see {@link dev.vladeezyy.kilnwork.Kilnwork} */
+  public ItemFluidTransfers withRegistries(RegistryAccess registries) {
+    this.registries = registries;
+    return this;
   }
 
   /** True if some transfer may apply to the stack */

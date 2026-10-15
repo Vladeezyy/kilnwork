@@ -25,7 +25,7 @@ public class Kilnwork {
   }
 
   private static void addReloadListeners(AddServerReloadListenersEvent event) {
-    event.addListener(id("fluid_transfers"), ItemFluidTransfers.INSTANCE);
+    event.addListener(id("fluid_transfers"), ItemFluidTransfers.INSTANCE.withRegistries(event.getRegistryAccess()));
   }
 
   /** Location in the Kilnwork namespace */
