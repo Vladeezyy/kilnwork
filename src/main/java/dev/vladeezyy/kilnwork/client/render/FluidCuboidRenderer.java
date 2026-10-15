@@ -31,7 +31,7 @@ public final class FluidCuboidRenderer {
   private FluidCuboidRenderer() {}
 
   /** Render type fluids are drawn with */
-  public static final RenderType RENDER_TYPE = RenderTypes.entityTranslucentCullItemTarget(TextureAtlas.LOCATION_BLOCKS);
+  public static final RenderType RENDER_TYPE = RenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS);
 
   /** Sprite of the block atlas */
   public static TextureAtlasSprite getBlockSprite(Identifier sprite) {
@@ -51,7 +51,7 @@ public final class FluidCuboidRenderer {
     if (facing.getAxis().isHorizontal() && facing != Direction.SOUTH) {
       matrices.pushPose();
       matrices.translate(0.5, 0, 0.5);
-      matrices.mulPose(Axis.YP.rotationDegrees(-90f * facing.get2DDataValue()));
+      matrices.rotateDegrees(Axis.YP, -90f * facing.get2DDataValue());
       matrices.translate(-0.5, 0, -0.5);
       return true;
     }
