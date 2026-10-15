@@ -63,7 +63,7 @@ public class GaugeBlock extends Block {
       if (handler != null && handler.size() > 0) {
         FluidStack fluid = FluidUtil.getStack(handler, 0);
         int capacity = handler.getCapacityAsInt(0, FluidResource.EMPTY);
-        player.displayClientMessage(fluid.isEmpty() ? FluidText.capacity(capacity) : FluidText.contents(fluid, capacity), true);
+        player.sendOverlayMessage(fluid.isEmpty() ? FluidText.capacity(capacity) : FluidText.contents(fluid, capacity));
       }
     }
     return InteractionResult.SUCCESS;
