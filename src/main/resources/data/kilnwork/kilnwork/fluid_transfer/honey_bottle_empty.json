@@ -1,0 +1,11 @@
+{
+  "type": "empty_item",
+  "input": {
+    "item": "minecraft:honey_bottle"
+  },
+  "fluid": {
+    "tag": "c:honey",
+    "amount": 250
+  },
+  "result": "minecraft:glass_bottle"
+}

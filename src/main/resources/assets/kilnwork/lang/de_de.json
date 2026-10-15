@@ -1,0 +1,9 @@
+{
+  "gui.kilnwork.fluid.capacity": "Fassungsvermögen: %s mB",
+  "gui.kilnwork.fluid.contents": "Enthält: %s",
+  "gui.kilnwork.fluid.format": "%s / %s mB %s",
+  "gui.kilnwork.fluid.millibuckets": "%s mB",
+  "gui.kilnwork.fluid.buckets": "%s Eimer (%s mB)",
+  "block.kilnwork.tank.filled": "%s mB %s eingefüllt",
+  "block.kilnwork.tank.drained": "%s mB %s entnommen"
+}

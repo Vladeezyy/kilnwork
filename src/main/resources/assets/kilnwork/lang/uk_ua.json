@@ -1,0 +1,9 @@
+{
+  "gui.kilnwork.fluid.capacity": "Місткість: %s мВ",
+  "gui.kilnwork.fluid.contents": "Містить: %s",
+  "gui.kilnwork.fluid.format": "%s / %s мВ %s",
+  "gui.kilnwork.fluid.millibuckets": "%s мВ",
+  "gui.kilnwork.fluid.buckets": "Відер: %s (%s мВ)",
+  "block.kilnwork.tank.filled": "Залито %s мВ: %s",
+  "block.kilnwork.tank.drained": "Злито %s мВ: %s"
+}

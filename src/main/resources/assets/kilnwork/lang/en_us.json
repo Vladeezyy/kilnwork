@@ -1,0 +1,9 @@
+{
+  "gui.kilnwork.fluid.capacity": "Capacity: %s mB",
+  "gui.kilnwork.fluid.contents": "Contains: %s",
+  "gui.kilnwork.fluid.format": "%s / %s mB %s",
+  "gui.kilnwork.fluid.millibuckets": "%s mB",
+  "gui.kilnwork.fluid.buckets": "%s buckets (%s mB)",
+  "block.kilnwork.tank.filled": "Filled %s mB of %s",
+  "block.kilnwork.tank.drained": "Drained %s mB of %s"
+}
