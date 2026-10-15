@@ -72,7 +72,7 @@ public final class FluidTransferHelper {
     // items with a fluid handler
     if (ItemAccess.forPlayerInteraction(player, hand).oneByOne().getCapability(Capabilities.Fluid.ITEM) != null) {
       if (!level.isClientSide()) {
-        FluidUtil.interactWithFluidHandler(player, hand, pos, tank);
+        FluidUtil.interactWithFluidHandler(player, hand, pos, tank, null);
       }
       return true;
     }
