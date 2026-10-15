@@ -1,8 +1,6 @@
 {
   "type": "empty_item",
-  "input": {
-    "item": "minecraft:mushroom_stew"
-  },
+  "input": "minecraft:mushroom_stew",
   "fluid": {
     "tag": "c:mushroom_stew",
     "amount": 250

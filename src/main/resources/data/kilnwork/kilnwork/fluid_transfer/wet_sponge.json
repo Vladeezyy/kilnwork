@@ -1,8 +1,6 @@
 {
   "type": "fill_item",
-  "input": {
-    "item": "minecraft:sponge"
-  },
+  "input": "minecraft:sponge",
   "fluid": {
     "tag": "c:water",
     "amount": 250

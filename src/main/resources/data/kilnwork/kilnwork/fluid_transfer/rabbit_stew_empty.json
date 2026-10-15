@@ -1,8 +1,6 @@
 {
   "type": "empty_item",
-  "input": {
-    "item": "minecraft:rabbit_stew"
-  },
+  "input": "minecraft:rabbit_stew",
   "fluid": {
     "tag": "c:rabbit_stew",
     "amount": 250

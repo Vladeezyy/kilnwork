@@ -1,8 +1,6 @@
 {
   "type": "fill_item",
-  "input": {
-    "item": "minecraft:glass_bottle"
-  },
+  "input": "minecraft:glass_bottle",
   "fluid": {
     "tag": "c:honey",
     "amount": 250
