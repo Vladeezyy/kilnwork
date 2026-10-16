@@ -12,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import dev.vladeezyy.kilnwork.util.LegacyItemStacks;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.wrapper.InvWrapper;
 
@@ -159,7 +160,8 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
       CompoundTag itemTag = list.getCompound(i);
       int slot = itemTag.getByte(TAG_SLOT) & 255;
       if (slot < inventory.size()) {
-        ItemStack stack = ItemStack.parse(registries, itemTag).orElse(ItemStack.EMPTY);
+        // items of 1.20 worlds are still in the old format here
+        ItemStack stack = LegacyItemStacks.parse(registries, itemTag);
         if (stack.getCount() > stackSizeLimit) {
           stack.setCount(stackSizeLimit);
         }
