@@ -5,5 +5,6 @@
   "gui.kilnwork.fluid.millibuckets": "%s mB",
   "gui.kilnwork.fluid.buckets": "%s baldes (%s mB)",
   "block.kilnwork.tank.filled": "Adicionados %s mB de %s",
-  "block.kilnwork.tank.drained": "Retirados %s mB de %s"
+  "block.kilnwork.tank.drained": "Retirados %s mB de %s",
+  "block.kilnwork.retextured.id": "Textura: %s"
 }

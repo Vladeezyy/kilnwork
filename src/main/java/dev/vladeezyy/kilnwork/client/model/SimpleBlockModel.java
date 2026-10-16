@@ -42,20 +42,71 @@ import java.util.function.Function;
 
 /**
  * Block model geometry read like a vanilla block model (parent, textures, elements), for loaders that need the
- * elements, such as cracked overlays. Based on Mantle's SimpleBlockModel (MIT, SlimeKnights).
+ * elements, such as cracked overlays. Optional {@code "colors": [{"color": "AARRGGBB", "luminosity": 0-15}]} tints
+ * the elements by index (loader {@code kilnwork:colored_block}). Based on Mantle's SimpleBlockModel and
+ * ColoredBlockModel (MIT, SlimeKnights).
  */
 public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
   @Nullable
   private ResourceLocation parentLocation;
   private final List<BlockElement> parts;
   private final Map<String, Either<Material, String>> textures;
+  /** Color per element index, missing entries are not tinted */
+  private final List<ElementColor> colors;
   @Nullable
   private BlockModel parent;
 
   public SimpleBlockModel(@Nullable ResourceLocation parentLocation, Map<String, Either<Material, String>> textures, List<BlockElement> parts) {
+    this(parentLocation, textures, parts, List.of());
+  }
+
+  public SimpleBlockModel(@Nullable ResourceLocation parentLocation, Map<String, Either<Material, String>> textures, List<BlockElement> parts, List<ElementColor> colors) {
     this.parentLocation = parentLocation;
     this.textures = textures;
     this.parts = parts;
+    this.colors = colors;
+  }
+
+  /** Color and light of one element; color -1 keeps the texture color, luminosity -1 keeps the model light */
+  public record ElementColor(int color, int luminosity) {
+    public static final ElementColor NONE = new ElementColor(-1, -1);
+
+    /** Reads {@code {"color": "AARRGGBB" or "RRGGBB", "luminosity": 0-15}} */
+    public static ElementColor read(JsonObject json) {
+      int color = -1;
+      if (json.has("color")) {
+        color = parseColor(GsonHelper.getAsString(json, "color"));
+      }
+      int luminosity = GsonHelper.getAsInt(json, "luminosity", -1);
+      if (luminosity < -1 || luminosity > 15) {
+        throw new JsonSyntaxException("luminosity must be between 0 and 15");
+      }
+      return new ElementColor(color, luminosity);
+    }
+  }
+
+  /** Parses a hex color, 6 digits are opaque */
+  public static int parseColor(String hex) {
+    if (hex.startsWith("#")) {
+      hex = hex.substring(1);
+    }
+    try {
+      if (hex.length() == 6) {
+        return 0xFF000000 | Integer.parseInt(hex, 16);
+      }
+      if (hex.length() == 8) {
+        return (int) Long.parseLong(hex, 16);
+      }
+    } catch (NumberFormatException e) {
+      // falls through to the error
+    }
+    throw new JsonSyntaxException("Invalid color '" + hex + "', expected RRGGBB or AARRGGBB");
+  }
+
+  /** Parent model after {@link #resolveParents(Function, IGeometryBakingContext)}, null if none */
+  @Nullable
+  public BlockModel getParent() {
+    return parent;
   }
 
   /** Elements of this model, or of the parent if it has none */
@@ -115,10 +166,24 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
 
   /** Bakes the given elements with the textures of the context */
   public static BakedModel bakeModel(IGeometryBakingContext owner, List<BlockElement> elements, Function<Material, TextureAtlasSprite> spriteGetter, ModelState transform, ItemOverrides overrides) {
+    return bakeModel(owner, elements, List.of(), spriteGetter, transform, overrides);
+  }
+
+  /** Bakes the given elements with the textures of the context and a color per element */
+  public static BakedModel bakeModel(IGeometryBakingContext owner, List<BlockElement> elements, List<ElementColor> colors, Function<Material, TextureAtlasSprite> spriteGetter, ModelState transform, ItemOverrides overrides) {
     TextureAtlasSprite particle = spriteGetter.apply(owner.getMaterial("particle"));
     SimpleBakedModel.Builder builder = new SimpleBakedModel.Builder(owner.useAmbientOcclusion(), owner.useBlockLight(), owner.isGui3d(), owner.getTransforms(), overrides).particle(particle);
     IQuadTransformer quadTransformer = owner.getRootTransform().isIdentity() ? QuadTransformers.empty() : UnbakedGeometryHelper.applyRootTransform(transform, owner.getRootTransform());
-    for (BlockElement part : elements) {
+    for (int i = 0; i < elements.size(); i++) {
+      BlockElement part = elements.get(i);
+      ElementColor color = i < colors.size() ? colors.get(i) : ElementColor.NONE;
+      IQuadTransformer partTransformer = quadTransformer;
+      if (color.color() != -1) {
+        partTransformer = partTransformer.andThen(ModelHelpers.color(color.color()));
+      }
+      if (color.luminosity() != -1) {
+        partTransformer = partTransformer.andThen(QuadTransformers.settingEmissivity(color.luminosity()));
+      }
       for (Map.Entry<Direction, BlockElementFace> entry : part.faces.entrySet()) {
         Direction direction = entry.getKey();
         BlockElementFace face = entry.getValue();
@@ -127,7 +192,7 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
           texture = texture.substring(1);
         }
         BakedQuad quad = BlockModel.bakeFace(part, face, spriteGetter.apply(owner.getMaterial(texture)), direction, transform);
-        quadTransformer.processInPlace(quad);
+        partTransformer.processInPlace(quad);
         Direction cull = face.cullForDirection();
         if (cull == null) {
           builder.addUnculledFace(quad);
@@ -142,7 +207,35 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
 
   @Override
   public BakedModel bake(IGeometryBakingContext owner, ModelBaker baker, Function<Material, TextureAtlasSprite> spriteGetter, ModelState transform, ItemOverrides overrides) {
-    return bakeModel(owner, getElements(), spriteGetter, transform, overrides);
+    return bakeModel(owner, getElements(), colors, spriteGetter, transform, overrides);
+  }
+
+  /**
+   * Bakes other elements with this model's colors after the atlas is stitched, such as a shelf with a set of books.
+   * Textures come straight from the atlas ({@link Material#sprite()}).
+   */
+  public BakedModel bakeWithElements(IGeometryBakingContext owner, List<BlockElement> elements, ModelState transform) {
+    return bakeModel(owner, elements, colors, Material::sprite, transform, ItemOverrides.EMPTY);
+  }
+
+  /** Bakes this model again with another context after the atlas is stitched, such as another texture */
+  public BakedModel bakeDynamic(IGeometryBakingContext owner, ModelState transform) {
+    return bakeWithElements(owner, getElements(), transform);
+  }
+
+  /** Reads one element or an array of elements, as in {@code "elements"} */
+  public static List<BlockElement> getModelElements(JsonDeserializationContext context, JsonElement json, String name) {
+    List<BlockElement> parts = new ArrayList<>();
+    if (json instanceof JsonArray array) {
+      for (JsonElement element : array) {
+        parts.add(context.deserialize(element, BlockElement.class));
+      }
+    } else if (json.isJsonObject()) {
+      parts.add(context.deserialize(json, BlockElement.class));
+    } else {
+      throw new JsonSyntaxException("Expected " + name + " to be an array or object");
+    }
+    return List.copyOf(parts);
   }
 
   /** Reads the model from JSON */
@@ -155,19 +248,13 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
         textures.put(entry.getKey(), BlockModel.Deserializer.parseTextureLocationOrReference(InventoryMenu.BLOCK_ATLAS, entry.getValue().getAsString()));
       }
     }
-    List<BlockElement> parts = new ArrayList<>();
-    if (json.has("elements")) {
-      JsonElement elements = json.get("elements");
-      if (elements instanceof JsonArray array) {
-        for (JsonElement element : array) {
-          parts.add(context.deserialize(element, BlockElement.class));
-        }
-      } else if (elements.isJsonObject()) {
-        parts.add(context.deserialize(elements, BlockElement.class));
-      } else {
-        throw new JsonSyntaxException("Expected elements to be an array or object");
+    List<BlockElement> parts = json.has("elements") ? getModelElements(context, json.get("elements"), "elements") : List.of();
+    List<ElementColor> colors = new ArrayList<>();
+    if (json.has("colors")) {
+      for (JsonElement color : GsonHelper.getAsJsonArray(json, "colors")) {
+        colors.add(ElementColor.read(GsonHelper.convertToJsonObject(color, "colors")));
       }
     }
-    return new SimpleBlockModel(parent, Map.copyOf(textures), List.copyOf(parts));
+    return new SimpleBlockModel(parent, Map.copyOf(textures), parts, List.copyOf(colors));
   }
 }

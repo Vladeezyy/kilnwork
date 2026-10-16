@@ -13,7 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Kilnwork: a small library for Vladeezyy's ports, built from the parts of Mantle (SlimeKnights, MIT) that Ceramics needs.
+ * Kilnwork: a small library for Vladeezyy's ports, built from the parts of Mantle (SlimeKnights, MIT) that Ceramics and Inspirations need.
  */
 @Mod(Kilnwork.MOD_ID)
 public class Kilnwork {
@@ -21,6 +21,7 @@ public class Kilnwork {
   public static final Logger LOG = LoggerFactory.getLogger("Kilnwork");
 
   public Kilnwork(IEventBus bus, ModContainer container) {
+    KilnworkRegistries.register(bus);
     NeoForge.EVENT_BUS.addListener(Kilnwork::addReloadListeners);
   }
 

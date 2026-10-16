@@ -1,5 +1,11 @@
 package dev.vladeezyy.kilnwork.client;
 
+import dev.vladeezyy.kilnwork.client.model.RetexturedModel;
+import dev.vladeezyy.kilnwork.client.model.SimpleBlockModel;
+import dev.vladeezyy.kilnwork.client.render.RenderItem;
+import net.neoforged.neoforge.client.event.ModelEvent;
+import net.neoforged.neoforge.client.model.geometry.IGeometryLoader;
+
 import dev.vladeezyy.kilnwork.Kilnwork;
 import dev.vladeezyy.kilnwork.client.model.ModelHelpers;
 import dev.vladeezyy.kilnwork.client.render.KilnworkFluidModels;
@@ -43,8 +49,15 @@ public final class KilnworkClient {
     event.registerReloadListener(KilnworkFluidModels.BLOCK_FLUIDS);
     event.registerReloadListener(KilnworkFluidModels.FAUCET_FLUIDS);
     event.registerReloadListener(KilnworkFluidModels.CHANNEL_FLUIDS);
+    event.registerReloadListener(RenderItem.ITEM_LISTS);
     event.registerReloadListener((ResourceManagerReloadListener) manager -> ModelHelpers.clearCache());
     NeoForge.EVENT_BUS.addListener(KilnworkClient::renderGaugeTooltip);
+  }
+
+  @SubscribeEvent
+  static void registerGeometryLoaders(ModelEvent.RegisterGeometryLoaders event) {
+    event.register(RetexturedModel.ID, RetexturedModel.LOADER);
+    event.register(Kilnwork.id("colored_block"), (IGeometryLoader<SimpleBlockModel>) SimpleBlockModel::deserialize);
   }
 
   /** Current level on the client, null if not in a world */
