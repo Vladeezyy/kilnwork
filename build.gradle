@@ -13,6 +13,16 @@ base {
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+repositories {
+    maven { url = 'https://maven.blamejared.com/' } // JEI
+}
+
+dependencies {
+    // JEI integration (plugin/jei) is loaded only when JEI is installed
+    compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
+}
 java.withSourcesJar()
 
 neoForge {
