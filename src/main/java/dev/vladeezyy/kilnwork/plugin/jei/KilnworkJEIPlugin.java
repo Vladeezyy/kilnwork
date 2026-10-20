@@ -12,7 +12,7 @@ import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.extensions.vanilla.crafting.ICraftingCategoryExtension;
 import mezz.jei.api.registration.IVanillaCategoryExtensionRegistration;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
@@ -23,7 +23,7 @@ import java.util.List;
 @JeiPlugin
 public class KilnworkJEIPlugin implements IModPlugin {
   @Override
-  public ResourceLocation getPluginUid() {
+  public Identifier getPluginUid() {
     return Kilnwork.id("jei");
   }
 
@@ -34,6 +34,13 @@ public class KilnworkJEIPlugin implements IModPlugin {
 
   /** Based on Mantle's RetexturableRecipeExtension (MIT, SlimeKnights) */
   private static class RetexturedExtension implements ICraftingCategoryExtension<ShapedRetexturedRecipe> {
+    @Override
+    public List<net.minecraft.world.item.crafting.display.SlotDisplay> getIngredients(RecipeHolder<ShapedRetexturedRecipe> holder) {
+      return holder.value().getIngredients().stream()
+        .map(ingredient -> ingredient.map(net.minecraft.world.item.crafting.Ingredient::display).orElse(net.minecraft.world.item.crafting.display.SlotDisplay.Empty.INSTANCE))
+        .toList();
+    }
+
     @Override
     public int getWidth(RecipeHolder<ShapedRetexturedRecipe> holder) {
       return holder.value().getWidth();
@@ -49,7 +56,8 @@ public class KilnworkJEIPlugin implements IModPlugin {
       ShapedRetexturedRecipe recipe = holder.value();
       // the untextured result, so a lookup of the plain item finds the recipe too
       builder.addInvisibleIngredients(RecipeIngredientRole.OUTPUT).addItemStack(recipe.getPlainOutput());
-      List<List<ItemStack>> inputs = recipe.getIngredients().stream().map(ingredient -> List.of(ingredient.getItems())).toList();
+      List<List<ItemStack>> inputs = recipe.getIngredients().stream()
+        .map(ingredient -> ingredient.map(i -> i.items().map(ItemStack::new).toList()).orElse(List.of())).toList();
       int width = recipe.getWidth();
       int height = recipe.getHeight();
       List<IRecipeSlotBuilder> slots = grid.createAndSetInputs(builder, VanillaTypes.ITEM_STACK, inputs, width, height);

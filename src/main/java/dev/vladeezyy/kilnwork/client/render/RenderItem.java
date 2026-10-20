@@ -7,7 +7,10 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.vladeezyy.kilnwork.data.BlockStateDataLoader;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.world.level.Level;
+import javax.annotation.Nullable;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
 import net.minecraft.util.ExtraCodecs;
@@ -16,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 import java.util.List;
 
@@ -24,7 +28,7 @@ import java.util.List;
  * state are read from {@code assets/<namespace>/kilnwork/item_lists/<block>.json} ({@link #ITEM_LISTS}).
  * Based on Mantle's RenderItem (MIT, SlimeKnights).
  */
-public record RenderItem(Vector3f center, float size, int x, int y, ItemDisplayContext transform) {
+public record RenderItem(Vector3fc center, float size, int x, int y, ItemDisplayContext transform) {
   private static final Codec<Integer> ROTATION = Codec.INT.validate(r -> r == 0 || r == 90 || r == 180 || r == 270 ? DataResult.success(r) : DataResult.error(() -> "Rotation must be 0, 90, 180 or 270: " + r));
   public static final Codec<RenderItem> CODEC = RecordCodecBuilder.create(inst -> inst.group(
     ExtraCodecs.VECTOR3F.optionalFieldOf("center", new Vector3f()).forGetter(RenderItem::center),
@@ -41,8 +45,17 @@ public record RenderItem(Vector3f center, float size, int x, int y, ItemDisplayC
     return size == 0;
   }
 
-  /** Draws the item at this position */
-  public void render(PoseStack matrices, MultiBufferSource buffer, ItemStack item, int light) {
+  /** Resolves the item model for this position (block entity render state extraction) */
+  public void update(ItemStackRenderState state, ItemStack item, @Nullable Level level, int seed) {
+    if (isHidden()) {
+      state.clear();
+      return;
+    }
+    Minecraft.getInstance().getItemModelResolver().updateForTopItem(state, item, transform, level, null, seed);
+  }
+
+  /** Draws the item resolved by {@link #update} at this position */
+  public void submit(PoseStack matrices, SubmitNodeCollector collector, ItemStackRenderState item, int light) {
     if (isHidden() || item.isEmpty()) {
       return;
     }
@@ -56,8 +69,7 @@ public record RenderItem(Vector3f center, float size, int x, int y, ItemDisplayC
     if (y != 0) {
       matrices.mulPose(Axis.YP.rotationDegrees(y));
     }
-    Minecraft minecraft = Minecraft.getInstance();
-    minecraft.getItemRenderer().renderStatic(item, transform, light, OverlayTexture.NO_OVERLAY, matrices, buffer, minecraft.level, 0);
+    item.submit(matrices, collector, light, OverlayTexture.NO_OVERLAY, 0);
     matrices.popPose();
   }
 

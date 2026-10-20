@@ -8,7 +8,6 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.CraftingInput;
@@ -19,7 +18,6 @@ import net.minecraft.world.item.crafting.ShapedRecipePattern;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -30,16 +28,16 @@ import java.util.stream.IntStream;
  */
 public class ShapedRetexturedRecipe extends ShapedRecipe {
   public static final MapCodec<ShapedRetexturedRecipe> CODEC = RecordCodecBuilder.mapCodec(inst -> inst.group(
-    Codec.STRING.optionalFieldOf("group", "").forGetter(ShapedRecipe::getGroup),
+    Codec.STRING.optionalFieldOf("group", "").forGetter(ShapedRecipe::group),
     CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.MISC).forGetter(ShapedRecipe::category),
     ShapedRecipePattern.MAP_CODEC.forGetter(r -> r.pattern),
     ItemStack.STRICT_CODEC.fieldOf("result").forGetter(r -> r.plainResult),
     Codec.BOOL.optionalFieldOf("show_notification", true).forGetter(ShapedRecipe::showNotification),
-    Ingredient.CODEC_NONEMPTY.fieldOf("texture").forGetter(r -> r.texture),
+    Ingredient.CODEC.fieldOf("texture").forGetter(r -> r.texture),
     Codec.BOOL.optionalFieldOf("match_all", false).forGetter(r -> r.matchAll)
   ).apply(inst, ShapedRetexturedRecipe::new));
-  public static final StreamCodec<RegistryFriendlyByteBuf, ShapedRetexturedRecipe> STREAM_CODEC = NeoForgeStreamCodecs.composite(
-    ByteBufCodecs.STRING_UTF8, ShapedRecipe::getGroup,
+  public static final StreamCodec<RegistryFriendlyByteBuf, ShapedRetexturedRecipe> STREAM_CODEC = StreamCodec.composite(
+    ByteBufCodecs.STRING_UTF8, ShapedRecipe::group,
     CraftingBookCategory.STREAM_CODEC, ShapedRecipe::category,
     ShapedRecipePattern.STREAM_CODEC, r -> r.pattern,
     ItemStack.STREAM_CODEC, r -> r.plainResult,
@@ -48,6 +46,7 @@ public class ShapedRetexturedRecipe extends ShapedRecipe {
     ByteBufCodecs.BOOL, r -> r.matchAll,
     ShapedRetexturedRecipe::new);
 
+  private final ShapedRecipePattern pattern;
   private final ItemStack plainResult;
   private final Ingredient texture;
   private final boolean matchAll;
@@ -56,6 +55,7 @@ public class ShapedRetexturedRecipe extends ShapedRecipe {
 
   public ShapedRetexturedRecipe(String group, CraftingBookCategory category, ShapedRecipePattern pattern, ItemStack result, boolean showNotification, Ingredient texture, boolean matchAll) {
     super(group, category, pattern, result, showNotification);
+    this.pattern = pattern;
     this.plainResult = result;
     this.texture = texture;
     this.matchAll = matchAll;
@@ -107,15 +107,15 @@ public class ShapedRetexturedRecipe extends ShapedRecipe {
   }
 
   @Override
-  public RecipeSerializer<?> getSerializer() {
+  public RecipeSerializer<ShapedRetexturedRecipe> getSerializer() {
     return KilnworkRegistries.SHAPED_RETEXTURED.get();
   }
 
   /** Every textured result, for recipe viewers */
   public List<ItemStack> getDisplayOutputs() {
     if (displayOutputs == null) {
-      displayOutputs = Arrays.stream(texture.getItems())
-        .map(stack -> Block.byItem(stack.getItem()))
+      displayOutputs = texture.items()
+        .map(holder -> Block.byItem(holder.value()))
         .filter(block -> block != Blocks.AIR)
         .distinct()
         .map(block -> RetexturedHelper.setTexture(plainResult.copy(), block))
@@ -130,8 +130,8 @@ public class ShapedRetexturedRecipe extends ShapedRecipe {
   /** Indices of the pattern holding the texture ingredient */
   public int[] getTextureSlots() {
     if (textureSlots == null) {
-      List<Ingredient> inputs = getIngredients();
-      textureSlots = IntStream.range(0, inputs.size()).filter(i -> inputs.get(i).equals(texture)).toArray();
+      List<java.util.Optional<Ingredient>> inputs = getIngredients();
+      textureSlots = IntStream.range(0, inputs.size()).filter(i -> inputs.get(i).filter(texture::equals).isPresent()).toArray();
     }
     return textureSlots;
   }

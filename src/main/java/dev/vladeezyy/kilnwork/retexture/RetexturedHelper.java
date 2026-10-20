@@ -7,9 +7,8 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -23,11 +22,11 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.functions.CopyComponentsFunction;
-import net.neoforged.neoforge.client.model.data.ModelData;
-import net.neoforged.neoforge.client.model.data.ModelProperty;
+import net.neoforged.neoforge.model.data.ModelData;
+import net.neoforged.neoforge.model.data.ModelProperty;
 
 import javax.annotation.Nullable;
-import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
@@ -55,7 +54,7 @@ public final class RetexturedHelper {
   /** Block for the given name, air if missing or invalid */
   public static Block getBlock(String name) {
     if (!name.isEmpty()) {
-      ResourceLocation location = ResourceLocation.tryParse(name);
+      Identifier location = Identifier.tryParse(name);
       if (location != null) {
         return BuiltInRegistries.BLOCK.getOptional(location).orElse(Blocks.AIR);
       }
@@ -79,10 +78,7 @@ public final class RetexturedHelper {
   public static Block getLegacyTexture(ItemStack stack) {
     CustomData data = stack.get(DataComponents.CUSTOM_DATA);
     if (data != null) {
-      CompoundTag tag = data.getUnsafe();
-      if (tag.contains(TAG_TEXTURE, Tag.TAG_STRING)) {
-        return getBlock(tag.getString(TAG_TEXTURE));
-      }
+      return getBlock(data.copyTag().getStringOr(TAG_TEXTURE, ""));
     }
     return Blocks.AIR;
   }
@@ -96,7 +92,7 @@ public final class RetexturedHelper {
     if (data == null || !data.contains(TAG_TEXTURE)) {
       return false;
     }
-    Block block = getBlock(data.copyTag().getString(TAG_TEXTURE));
+    Block block = getBlock(data.copyTag().getStringOr(TAG_TEXTURE, ""));
     CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.remove(TAG_TEXTURE));
     if (block != Blocks.AIR && !stack.has(KilnworkRegistries.TEXTURE)) {
       stack.set(KilnworkRegistries.TEXTURE, block);
@@ -117,7 +113,7 @@ public final class RetexturedHelper {
   /** Call on both sides when the texture of a block entity changes, refreshes the model on the client */
   public static void onTextureUpdated(BlockEntity self) {
     Level level = self.getLevel();
-    if (level != null && level.isClientSide) {
+    if (level != null && level.isClientSide()) {
       self.requestModelDataUpdate();
       BlockState state = self.getBlockState();
       level.sendBlockUpdated(self.getBlockPos(), state, state, 0);
@@ -142,12 +138,12 @@ public final class RetexturedHelper {
   }
 
   /** Adds the texture block, and its id in advanced tooltips */
-  public static void addTooltip(ItemStack stack, List<Component> tooltip, TooltipFlag flag) {
+  public static void addTooltip(ItemStack stack, Consumer<Component> tooltip, TooltipFlag flag) {
     Block block = getTexture(stack);
     if (block != Blocks.AIR) {
-      tooltip.add(block.getName().withStyle(ChatFormatting.GRAY));
+      tooltip.accept(block.getName().withStyle(ChatFormatting.GRAY));
       if (flag.isAdvanced()) {
-        tooltip.add(Component.translatable(KEY_ID, BuiltInRegistries.BLOCK.getKey(block).toString()).withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable(KEY_ID, BuiltInRegistries.BLOCK.getKey(block).toString()).withStyle(ChatFormatting.DARK_GRAY));
       }
     }
   }
@@ -180,6 +176,6 @@ public final class RetexturedHelper {
 
   /** Loot function copying the texture from the block entity (needs {@link IRetexturedBlockEntity#collectImplicitComponents}) */
   public static CopyComponentsFunction.Builder copyTexture() {
-    return CopyComponentsFunction.copyComponents(CopyComponentsFunction.Source.BLOCK_ENTITY).include(KilnworkRegistries.TEXTURE.get());
+    return CopyComponentsFunction.copyComponentsFromBlockEntity(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_ENTITY).include(KilnworkRegistries.TEXTURE.get());
   }
 }

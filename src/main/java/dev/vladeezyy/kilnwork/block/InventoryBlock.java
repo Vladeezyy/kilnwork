@@ -1,6 +1,7 @@
 package dev.vladeezyy.kilnwork.block;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
@@ -11,14 +12,12 @@ import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.items.IItemHandler;
 
 import javax.annotation.Nullable;
 
 /**
- * Block with an inventory and a menu: the block entity is a {@link MenuProvider} and exposes
- * {@link Capabilities.ItemHandler#BLOCK}. Drops the items when removed. Based on Mantle's InventoryBlock (MIT, SlimeKnights).
+ * Block with an inventory and a menu: the block entity is a {@link MenuProvider}; a block entity that is a
+ * {@link net.minecraft.world.Container} drops its items when the block is removed (vanilla, since 1.21.5). Based on Mantle's InventoryBlock (MIT, SlimeKnights).
  */
 public abstract class InventoryBlock extends Block implements EntityBlock {
   protected InventoryBlock(Properties properties) {
@@ -52,27 +51,8 @@ public abstract class InventoryBlock extends Block implements EntityBlock {
   }
 
   @Override
-  protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-    if (!state.is(newState.getBlock())) {
-      IItemHandler inventory = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null);
-      if (inventory != null) {
-        dropInventoryItems(state, level, pos, inventory);
-        level.updateNeighbourForOutputSignal(pos, this);
-      }
-    }
-    super.onRemove(state, level, pos, newState, isMoving);
-  }
-
-  /** Drops the items when the block is replaced */
-  protected void dropInventoryItems(BlockState state, Level level, BlockPos pos, IItemHandler inventory) {
-    dropInventoryItems(level, pos, inventory);
-  }
-
-  /** Drops every item of the inventory at the position */
-  public static void dropInventoryItems(Level level, BlockPos pos, IItemHandler inventory) {
-    for (int i = 0; i < inventory.getSlots(); i++) {
-      Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), inventory.getStackInSlot(i));
-    }
+  protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel level, BlockPos pos, boolean movedByPiston) {
+    Containers.updateNeighboursAfterDestroy(state, level, pos);
   }
 
   @Override

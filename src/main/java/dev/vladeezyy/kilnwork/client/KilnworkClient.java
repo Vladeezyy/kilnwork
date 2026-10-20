@@ -1,7 +1,19 @@
 package dev.vladeezyy.kilnwork.client;
 
 import dev.vladeezyy.kilnwork.Kilnwork;
+import dev.vladeezyy.kilnwork.client.model.RetexturedBlockModel;
+import dev.vladeezyy.kilnwork.client.model.RetexturedItemModel;
+import dev.vladeezyy.kilnwork.client.model.RetexturedModelLoader;
+import dev.vladeezyy.kilnwork.client.model.RetexturedQuads;
 import dev.vladeezyy.kilnwork.client.render.KilnworkFluidModels;
+import dev.vladeezyy.kilnwork.client.render.RenderItem;
+import dev.vladeezyy.kilnwork.retexture.RetexturedBlock;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.world.level.block.Block;
+import net.neoforged.neoforge.client.event.ModelEvent;
+import net.neoforged.neoforge.client.event.RegisterItemModelsEvent;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import dev.vladeezyy.kilnwork.fluid.FluidText;
 import dev.vladeezyy.kilnwork.tag.KilnworkTags;
 import net.minecraft.ChatFormatting;
@@ -31,6 +43,7 @@ import net.minecraft.world.item.ItemStack;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /** Client side of Kilnwork: data loaders and the gauge tooltip */
@@ -43,7 +56,48 @@ public final class KilnworkClient {
     event.addListener(Kilnwork.id("block_fluids"), KilnworkFluidModels.BLOCK_FLUIDS);
     event.addListener(Kilnwork.id("faucet_fluids"), KilnworkFluidModels.FAUCET_FLUIDS);
     event.addListener(Kilnwork.id("channel_fluids"), KilnworkFluidModels.CHANNEL_FLUIDS);
+    event.addListener(Kilnwork.id("item_lists"), RenderItem.ITEM_LISTS);
     NeoForge.EVENT_BUS.addListener(KilnworkClient::renderGaugeTooltip);
+  }
+
+  /** Block models wrapped after baking, see {@link #wrapBlockModels} */
+  private static final List<Map.Entry<Predicate<Block>, Function<BlockStateModel, BlockStateModel>>> WRAPPERS = new ArrayList<>(List.of(
+    Map.entry(block -> block instanceof RetexturedBlock, RetexturedBlockModel::new)));
+
+  /**
+   * Wraps the baked models of the matching blocks, for example in a {@link RetexturedBlockModel} subclass. Call during
+   * client setup; the first matching wrapper is used, {@link RetexturedBlock}s get a {@link RetexturedBlockModel}
+   * unless an earlier registration matches.
+   */
+  public static void wrapBlockModels(Predicate<Block> blocks, Function<BlockStateModel, BlockStateModel> wrapper) {
+    WRAPPERS.add(0, Map.entry(blocks, wrapper));
+  }
+
+  @SubscribeEvent
+  static void registerLoaders(ModelEvent.RegisterLoaders event) {
+    event.register(RetexturedModelLoader.ID, RetexturedModelLoader.INSTANCE);
+  }
+
+  @SubscribeEvent
+  static void registerItemModels(RegisterItemModelsEvent event) {
+    event.register(RetexturedItemModel.ID, RetexturedItemModel.Unbaked.MAP_CODEC);
+  }
+
+  @SubscribeEvent
+  static void wrapModels(ModelEvent.ModifyBakingResult event) {
+    event.getBakingResult().blockStateModels().replaceAll((state, model) -> {
+      for (Map.Entry<Predicate<Block>, Function<BlockStateModel, BlockStateModel>> wrapper : WRAPPERS) {
+        if (wrapper.getKey().test(state.getBlock())) {
+          return wrapper.getValue().apply(model);
+        }
+      }
+      return model;
+    });
+  }
+
+  @SubscribeEvent
+  static void bakingCompleted(ModelEvent.BakingCompleted event) {
+    RetexturedQuads.bakingCompleted();
   }
 
   /** Current level on the client, null if not in a world */

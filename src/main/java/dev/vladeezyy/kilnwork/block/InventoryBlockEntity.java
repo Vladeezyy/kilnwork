@@ -1,24 +1,25 @@
 package dev.vladeezyy.kilnwork.block;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
+import net.minecraft.world.ItemStackWithSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import dev.vladeezyy.kilnwork.util.LegacyItemStacks;
-import net.neoforged.neoforge.items.IItemHandlerModifiable;
-import net.neoforged.neoforge.items.wrapper.InvWrapper;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.item.VanillaContainerWrapper;
 
 /**
- * Block entity with a vanilla {@link Container} inventory and an item handler for it. Register the item handler
- * capability yourself ({@code RegisterCapabilitiesEvent}). Based on Mantle's InventoryBlockEntity (MIT, SlimeKnights).
+ * Block entity with a vanilla {@link Container} inventory and a transfer API handler for it. Register the item
+ * capability yourself ({@code RegisterCapabilitiesEvent}, {@code Capabilities.Item.BLOCK}). Based on Mantle's InventoryBlockEntity (MIT, SlimeKnights).
  */
 public abstract class InventoryBlockEntity extends NameableBlockEntity implements Container {
   private static final String TAG_ITEMS = "Items";
@@ -26,7 +27,7 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
 
   private final NonNullList<ItemStack> inventory;
   protected final int stackSizeLimit;
-  protected final IItemHandlerModifiable itemHandler;
+  protected final ResourceHandler<ItemResource> itemHandler;
 
   public InventoryBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state, Component name, int inventorySize) {
     this(type, pos, state, name, inventorySize, 64);
@@ -36,11 +37,11 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
     super(type, pos, state, name);
     this.inventory = NonNullList.withSize(inventorySize, ItemStack.EMPTY);
     this.stackSizeLimit = maxStackSize;
-    this.itemHandler = new InvWrapper(this);
+    this.itemHandler = VanillaContainerWrapper.of(this);
   }
 
-  /** Item handler over this inventory */
-  public IItemHandlerModifiable getItemHandler() {
+  /** Item handler (transfer API) over this inventory */
+  public ResourceHandler<ItemResource> getItemHandler() {
     return itemHandler;
   }
 
@@ -123,45 +124,39 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
     if (level == null || level.getBlockEntity(worldPosition) != this || getBlockState().isAir()) {
       return false;
     }
-    return player.canInteractWithBlock(worldPosition, 4.0);
+    return Container.stillValidBlockEntity(this, player);
   }
 
   @Override
-  protected void loadAdditional(CompoundTag tags, HolderLookup.Provider registries) {
-    super.loadAdditional(tags, registries);
-    readInventory(tags, registries);
+  protected void loadAdditional(ValueInput input) {
+    super.loadAdditional(input);
+    readInventory(input);
   }
 
   @Override
-  protected void saveAdditional(CompoundTag tags, HolderLookup.Provider registries) {
-    super.saveAdditional(tags, registries);
-    writeInventory(tags, registries);
+  protected void saveAdditional(ValueOutput output) {
+    super.saveAdditional(output);
+    writeInventory(output);
   }
 
   /** Writes the items as {@code Items: [{Slot: n, ...}]}, the format of Mantle 1.20 */
-  public void writeInventory(CompoundTag tag, HolderLookup.Provider registries) {
-    ListTag list = new ListTag();
+  public void writeInventory(ValueOutput output) {
+    ValueOutput.TypedOutputList<ItemStackWithSlot> list = output.list(TAG_ITEMS, ItemStackWithSlot.CODEC);
     for (int i = 0; i < inventory.size(); i++) {
       ItemStack stack = inventory.get(i);
       if (!stack.isEmpty()) {
-        CompoundTag itemTag = new CompoundTag();
-        itemTag.putByte(TAG_SLOT, (byte) i);
-        list.add(stack.save(registries, itemTag));
+        list.add(new ItemStackWithSlot(i, stack));
       }
     }
-    tag.put(TAG_ITEMS, list);
   }
 
-  /** Reads the items written by {@link #writeInventory}, replacing the contents */
-  public void readInventory(CompoundTag tag, HolderLookup.Provider registries) {
+  /** Reads the items written by {@link #writeInventory}, replacing the contents; items of 1.20 worlds are converted */
+  public void readInventory(ValueInput input) {
     inventory.replaceAll(ignored -> ItemStack.EMPTY);
-    ListTag list = tag.getList(TAG_ITEMS, Tag.TAG_COMPOUND);
-    for (int i = 0; i < list.size(); i++) {
-      CompoundTag itemTag = list.getCompound(i);
-      int slot = itemTag.getByte(TAG_SLOT) & 255;
+    for (CompoundTag itemTag : input.read(TAG_ITEMS, CompoundTag.CODEC.listOf()).orElse(java.util.List.of())) {
+      int slot = itemTag.getByteOr(TAG_SLOT, (byte) 0) & 255;
       if (slot < inventory.size()) {
-        // items of 1.20 worlds are still in the old format here
-        ItemStack stack = LegacyItemStacks.parse(registries, itemTag);
+        ItemStack stack = LegacyItemStacks.parse(input.lookup(), itemTag);
         if (stack.getCount() > stackSizeLimit) {
           stack.setCount(stackSizeLimit);
         }

@@ -6,6 +6,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.NumericTag;
 import net.minecraft.util.datafix.DataFixers;
 import net.minecraft.util.datafix.fixes.References;
 import net.minecraft.world.item.ItemStack;
@@ -22,18 +23,18 @@ public final class LegacyItemStacks {
 
   /** True if the tag is an item stack in the format before 1.20.5 */
   public static boolean isLegacy(CompoundTag tag) {
-    return tag.contains("Count", Tag.TAG_ANY_NUMERIC) && !tag.contains("count");
+    return tag.get("Count") instanceof NumericTag && !tag.contains("count");
   }
 
   /** Parses a stack of either format, empty if invalid */
   public static ItemStack parse(HolderLookup.Provider registries, CompoundTag tag) {
     if (isLegacy(tag)) {
       Tag fixed = DataFixers.getDataFixer().update(References.ITEM_STACK, new Dynamic<>(NbtOps.INSTANCE, tag),
-        DATA_VERSION_1_20_1, SharedConstants.getCurrentVersion().getDataVersion().getVersion()).getValue();
+        DATA_VERSION_1_20_1, SharedConstants.getCurrentVersion().dataVersion().version()).getValue();
       if (fixed instanceof CompoundTag fixedTag) {
         tag = fixedTag;
       }
     }
-    return ItemStack.parseOptional(registries, tag);
+    return ItemStack.OPTIONAL_CODEC.parse(registries.createSerializationContext(NbtOps.INSTANCE), tag).result().orElse(ItemStack.EMPTY);
   }
 }

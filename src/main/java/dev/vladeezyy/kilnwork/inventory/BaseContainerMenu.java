@@ -52,7 +52,7 @@ public class BaseContainerMenu<T extends BlockEntity> extends AbstractContainerM
     if (level == null || !level.isLoaded(tile.getBlockPos())) {
       return false;
     }
-    return player.canInteractWithBlock(tile.getBlockPos(), 4.0);
+    return player.isWithinBlockInteractionRange(tile.getBlockPos(), 4.0);
   }
 
   /** Adds the player inventory, must be called after all other slots */

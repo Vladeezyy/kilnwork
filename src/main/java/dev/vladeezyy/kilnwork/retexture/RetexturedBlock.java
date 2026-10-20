@@ -1,20 +1,17 @@
 package dev.vladeezyy.kilnwork.retexture;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
-import java.util.List;
 
 /**
- * Block taking its texture from another block, see {@link IRetexturedBlockEntity}. Based on Mantle's RetexturedBlock
+ * Block taking its texture from another block, see {@link IRetexturedBlockEntity}; its item is a
+ * {@link RetexturedBlockItem} (the texture in the tooltip). Based on Mantle's RetexturedBlock
  * (MIT, SlimeKnights).
  */
 public abstract class RetexturedBlock extends Block implements EntityBlock {
@@ -23,13 +20,8 @@ public abstract class RetexturedBlock extends Block implements EntityBlock {
   }
 
   @Override
-  public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+  protected ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
     return getPickBlock(level, pos, state);
-  }
-
-  @Override
-  public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-    RetexturedHelper.addTooltip(stack, tooltip, flag);
   }
 
   /** Stack of the block with the texture of its block entity */

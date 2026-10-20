@@ -1,17 +1,18 @@
 package dev.vladeezyy.kilnwork.block;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.Nameable;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 import javax.annotation.Nullable;
 
@@ -56,9 +57,9 @@ public abstract class NameableBlockEntity extends SyncedBlockEntity implements M
   }
 
   @Override
-  protected void applyImplicitComponents(DataComponentInput input) {
-    super.applyImplicitComponents(input);
-    this.customName = input.get(DataComponents.CUSTOM_NAME);
+  protected void applyImplicitComponents(DataComponentGetter components) {
+    super.applyImplicitComponents(components);
+    this.customName = components.get(DataComponents.CUSTOM_NAME);
   }
 
   @Override
@@ -67,26 +68,21 @@ public abstract class NameableBlockEntity extends SyncedBlockEntity implements M
     components.set(DataComponents.CUSTOM_NAME, this.customName);
   }
 
-  @SuppressWarnings("deprecation")
   @Override
-  public void removeComponentsFromTag(CompoundTag tag) {
-    super.removeComponentsFromTag(tag);
-    tag.remove(TAG_CUSTOM_NAME);
+  public void removeComponentsFromTag(ValueOutput output) {
+    super.removeComponentsFromTag(output);
+    output.discard(TAG_CUSTOM_NAME);
   }
 
   @Override
-  protected void loadAdditional(CompoundTag tags, HolderLookup.Provider registries) {
-    super.loadAdditional(tags, registries);
-    if (tags.contains(TAG_CUSTOM_NAME, Tag.TAG_STRING)) {
-      this.customName = BlockEntity.parseCustomNameSafe(tags.getString(TAG_CUSTOM_NAME), registries);
-    }
+  protected void loadAdditional(ValueInput input) {
+    super.loadAdditional(input);
+    this.customName = BlockEntity.parseCustomNameSafe(input, TAG_CUSTOM_NAME);
   }
 
   @Override
-  protected void saveSynced(CompoundTag tags, HolderLookup.Provider registries) {
-    super.saveSynced(tags, registries);
-    if (this.customName != null) {
-      tags.putString(TAG_CUSTOM_NAME, Component.Serializer.toJson(this.customName, registries));
-    }
+  protected void saveSynced(ValueOutput output) {
+    super.saveSynced(output);
+    output.storeNullable(TAG_CUSTOM_NAME, ComponentSerialization.CODEC, this.customName);
   }
 }

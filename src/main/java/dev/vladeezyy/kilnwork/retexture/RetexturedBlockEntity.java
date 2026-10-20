@@ -3,15 +3,16 @@ package dev.vladeezyy.kilnwork.retexture;
 import dev.vladeezyy.kilnwork.KilnworkRegistries;
 import dev.vladeezyy.kilnwork.block.SyncedBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.neoforged.neoforge.model.data.ModelData;
 
 /**
  * Block entity holding only a texture. Based on Mantle's DefaultRetexturedBlockEntity (MIT, SlimeKnights).
@@ -44,9 +45,9 @@ public class RetexturedBlockEntity extends SyncedBlockEntity implements IRetextu
   }
 
   @Override
-  protected void applyImplicitComponents(DataComponentInput input) {
-    super.applyImplicitComponents(input);
-    Block block = input.get(KilnworkRegistries.TEXTURE);
+  protected void applyImplicitComponents(DataComponentGetter components) {
+    super.applyImplicitComponents(components);
+    Block block = components.get(KilnworkRegistries.TEXTURE);
     this.texture = block != null ? block : Blocks.AIR;
   }
 
@@ -56,11 +57,10 @@ public class RetexturedBlockEntity extends SyncedBlockEntity implements IRetextu
     IRetexturedBlockEntity.collectImplicitComponents(this, components);
   }
 
-  @SuppressWarnings("deprecation")
   @Override
-  public void removeComponentsFromTag(CompoundTag tag) {
-    super.removeComponentsFromTag(tag);
-    tag.remove(RetexturedHelper.TAG_TEXTURE);
+  public void removeComponentsFromTag(ValueOutput output) {
+    super.removeComponentsFromTag(output);
+    output.discard(RetexturedHelper.TAG_TEXTURE);
   }
 
   @Override
@@ -69,17 +69,17 @@ public class RetexturedBlockEntity extends SyncedBlockEntity implements IRetextu
   }
 
   @Override
-  protected void saveSynced(CompoundTag tags, HolderLookup.Provider registries) {
-    super.saveSynced(tags, registries);
+  protected void saveSynced(ValueOutput output) {
+    super.saveSynced(output);
     if (texture != Blocks.AIR) {
-      tags.putString(RetexturedHelper.TAG_TEXTURE, getTextureName());
+      output.putString(RetexturedHelper.TAG_TEXTURE, getTextureName());
     }
   }
 
   @Override
-  protected void loadAdditional(CompoundTag tags, HolderLookup.Provider registries) {
-    super.loadAdditional(tags, registries);
-    String name = readTextureName(tags);
+  protected void loadAdditional(ValueInput input) {
+    super.loadAdditional(input);
+    String name = readTextureName(input);
     if (name != null) {
       texture = RetexturedHelper.getBlock(name);
       RetexturedHelper.onTextureUpdated(this);
@@ -91,16 +91,15 @@ public class RetexturedBlockEntity extends SyncedBlockEntity implements IRetextu
    * ({@code ForgeData}), read that too for 1.20 worlds.
    */
   @javax.annotation.Nullable
-  public static String readTextureName(CompoundTag tags) {
-    if (tags.contains(RetexturedHelper.TAG_TEXTURE, Tag.TAG_STRING)) {
-      return tags.getString(RetexturedHelper.TAG_TEXTURE);
+  public static String readTextureName(ValueInput input) {
+    var name = input.getString(RetexturedHelper.TAG_TEXTURE);
+    if (name.isPresent()) {
+      return name.get();
     }
     for (String key : new String[] {"NeoForgeData", "ForgeData"}) {
-      if (tags.contains(key, Tag.TAG_COMPOUND)) {
-        CompoundTag data = tags.getCompound(key);
-        if (data.contains(RetexturedHelper.TAG_TEXTURE, Tag.TAG_STRING)) {
-          return data.getString(RetexturedHelper.TAG_TEXTURE);
-        }
+      var data = input.read(key, CompoundTag.CODEC);
+      if (data.isPresent() && data.get().getString(RetexturedHelper.TAG_TEXTURE).isPresent()) {
+        return data.get().getStringOr(RetexturedHelper.TAG_TEXTURE, "");
       }
     }
     return null;
