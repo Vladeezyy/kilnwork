@@ -16,6 +16,7 @@
     "main": ["dev.vladeezyy.kilnwork.fabric.KilnworkFabric"],
     "client": ["dev.vladeezyy.kilnwork.fabric.client.KilnworkFabricClient"]
   },
+  "mixins": ["kilnwork.mixins.json"],
   "accessWidener": "kilnwork.accesswidener",
   "depends": {
     "fabricloader": ">=${fabric_loader_version}",

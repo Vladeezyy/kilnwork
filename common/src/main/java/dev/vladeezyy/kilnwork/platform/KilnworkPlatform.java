@@ -57,6 +57,9 @@ public interface KilnworkPlatform {
   /** Temperature of the fluid in Kelvin (water 300, lava 1300) */
   int fluidTemperature(FluidStack fluid);
 
+  /** Light level the fluid gives off (lava 15) */
+  int fluidLightLevel(FluidStack fluid);
+
   /** Sound of filling a bucket with the fluid, null for the default */
   @Nullable
   SoundEvent fluidFillSound(FluidStack fluid);
@@ -75,6 +78,21 @@ public interface KilnworkPlatform {
    */
   @Nullable
   IFluidHandlerItem fluidHandler(ItemStack stack);
+
+  /**
+   * Cached lookup of the fluid handler at a position, for block entities that check a neighbor often (NeoForge
+   * BlockCapabilityCache, Fabric BlockApiCache). {@code isValid} is false once the caller is removed.
+   */
+  FluidHandlerCache fluidHandlerCache(ServerLevel level, BlockPos pos, @Nullable Direction side, java.util.function.BooleanSupplier isValid);
+
+  /** Tells cached lookups that the fluid handlers of the block at the position changed (NeoForge invalidateCapabilities) */
+  void invalidateFluidHandlers(Level level, BlockPos pos);
+
+  @FunctionalInterface
+  interface FluidHandlerCache {
+    @Nullable
+    IFluidHandler get();
+  }
 
   /* Menus and networking */
 

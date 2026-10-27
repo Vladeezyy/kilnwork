@@ -38,6 +38,7 @@ public final class LoaderHooks {
   private static final List<ItemFluidHandler> ITEM_FLUID_HANDLERS = new ArrayList<>();
   private static final List<ClientboundPacket<?>> CLIENTBOUND_PACKETS = new ArrayList<>();
   private static final List<ReloadListener> SERVER_RELOAD_LISTENERS = new ArrayList<>();
+  private static final List<Runnable> TAGS_LOADED = new ArrayList<>();
 
   /** Fluid handler of a block entity type of this mod */
   public static synchronized <B extends BlockEntity> void blockFluidHandler(Supplier<? extends BlockEntityType<B>> type, BiFunction<B, Direction, IFluidHandler> handler) {
@@ -57,6 +58,20 @@ public final class LoaderHooks {
   /** Data reload listener (server data packs) */
   public static synchronized void serverReloadListener(ResourceLocation id, PreparableReloadListener listener) {
     SERVER_RELOAD_LISTENERS.add(new ReloadListener(id, listener));
+  }
+
+  /** Runs whenever tags are (re)loaded, on the server and on the client */
+  public static synchronized void tagsLoaded(Runnable listener) {
+    TAGS_LOADED.add(listener);
+  }
+
+  /** Called by the loader part when tags are loaded */
+  public static void fireTagsLoaded() {
+    List<Runnable> listeners;
+    synchronized (LoaderHooks.class) {
+      listeners = new ArrayList<>(TAGS_LOADED);
+    }
+    listeners.forEach(Runnable::run);
   }
 
   public static synchronized List<BlockFluidHandler<?>> blockFluidHandlers() {

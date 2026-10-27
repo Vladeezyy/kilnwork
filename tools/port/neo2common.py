@@ -24,7 +24,7 @@ def rewrite(src):
         src = src.replace('import ' + old + ';', 'import ' + new + ';')
     # capabilities -> platform lookups
     src = re.sub(r'(\w+(?:\.\w+\(\))?)\.getCapability\(Capabilities\.FluidHandler\.BLOCK,\s*', r'KilnworkPlatform.get().fluidHandler(\1, ', src)
-    src = re.sub(r'([\w.()]+?)\.getCapability\(Capabilities\.FluidHandler\.ITEM\)', r'KilnworkPlatform.get().fluidHandler(\1)', src)
+    src = re.sub(r'\b((?:new )?[\w.]+(?:\((?:[^()]|\([^()]*\))*\))?(?:\.\w+\((?:[^()]|\([^()]*\))*\))*)\.getCapability\(Capabilities\.FluidHandler\.ITEM\)', r'KilnworkPlatform.get().fluidHandler(\1)', src)
     src = src.replace('FluidType.BUCKET_VOLUME', 'FluidStack.BUCKET_VOLUME')
     # registration types
     src = re.sub(r'\bDeferredBlock<([^<>]+(?:<[^<>]*>)?)>', r'Registrar.Entry<Block, \1>', src)

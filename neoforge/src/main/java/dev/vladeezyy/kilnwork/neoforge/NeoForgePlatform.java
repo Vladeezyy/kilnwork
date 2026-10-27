@@ -22,6 +22,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.common.SoundActions;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
@@ -62,6 +63,11 @@ public class NeoForgePlatform implements KilnworkPlatform {
     return fluid.getFluid().getFluidType().getTemperature(NeoFluidHandlers.toNeo(fluid));
   }
 
+  @Override
+  public int fluidLightLevel(FluidStack fluid) {
+    return fluid.getFluid().getFluidType().getLightLevel(NeoFluidHandlers.toNeo(fluid));
+  }
+
   @Nullable
   @Override
   public SoundEvent fluidFillSound(FluidStack fluid) {
@@ -84,6 +90,31 @@ public class NeoForgePlatform implements KilnworkPlatform {
   @Override
   public IFluidHandlerItem fluidHandler(ItemStack stack) {
     return NeoFluidHandlers.fromNeo(stack.getCapability(Capabilities.FluidHandler.ITEM));
+  }
+
+  @Override
+  public void invalidateFluidHandlers(Level level, BlockPos pos) {
+    level.invalidateCapabilities(pos);
+  }
+
+  @Override
+  public FluidHandlerCache fluidHandlerCache(ServerLevel level, BlockPos pos, @Nullable Direction side, java.util.function.BooleanSupplier isValid) {
+    BlockCapabilityCache<net.neoforged.neoforge.fluids.capability.IFluidHandler, Direction> cache = BlockCapabilityCache.create(Capabilities.FluidHandler.BLOCK, level, pos, side, isValid, () -> {});
+    return new FluidHandlerCache() {
+      private net.neoforged.neoforge.fluids.capability.IFluidHandler last;
+      private IFluidHandler wrapped;
+
+      @Nullable
+      @Override
+      public IFluidHandler get() {
+        net.neoforged.neoforge.fluids.capability.IFluidHandler handler = cache.getCapability();
+        if (handler != last) {
+          last = handler;
+          wrapped = NeoFluidHandlers.fromNeo(handler);
+        }
+        return wrapped;
+      }
+    };
   }
 
   @Override

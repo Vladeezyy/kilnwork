@@ -74,6 +74,11 @@ public class FabricPlatform implements KilnworkPlatform {
     return FluidVariantAttributes.getTemperature(FluidAmounts.toVariant(fluid));
   }
 
+  @Override
+  public int fluidLightLevel(FluidStack fluid) {
+    return FluidVariantAttributes.getLuminance(FluidAmounts.toVariant(fluid));
+  }
+
   @Nullable
   @Override
   public SoundEvent fluidFillSound(FluidStack fluid) {
@@ -100,6 +105,34 @@ public class FabricPlatform implements KilnworkPlatform {
   @Override
   public IFluidHandlerItem fluidHandler(ItemStack stack) {
     return StorageFluidHandlerItem.of(stack);
+  }
+
+  @Override
+  public void invalidateFluidHandlers(Level level, BlockPos pos) {
+    // Fabric's BlockApiCache asks the block entity's provider on every find
+  }
+
+  @Override
+  public FluidHandlerCache fluidHandlerCache(ServerLevel level, BlockPos pos, @Nullable Direction side, java.util.function.BooleanSupplier isValid) {
+    net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache<Storage<FluidVariant>, Direction> cache = net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache.create(FluidStorage.SIDED, level, pos);
+    return new FluidHandlerCache() {
+      private Storage<FluidVariant> last;
+      private IFluidHandler wrapped;
+
+      @Nullable
+      @Override
+      public IFluidHandler get() {
+        if (!isValid.getAsBoolean()) {
+          return null;
+        }
+        Storage<FluidVariant> storage = cache.find(side);
+        if (storage != last) {
+          last = storage;
+          wrapped = storage == null ? null : storage instanceof FluidHandlerStorage own ? own.getHandler() : new StorageFluidHandler(storage);
+        }
+        return wrapped;
+      }
+    };
   }
 
   @Override

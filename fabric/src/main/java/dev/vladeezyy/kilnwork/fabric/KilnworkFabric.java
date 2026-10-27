@@ -41,16 +41,21 @@ public class KilnworkFabric implements ModInitializer {
   public void onInitialize() {
     Kilnwork.init();
     register(Kilnwork.MOD_ID);
+    net.fabricmc.fabric.api.event.lifecycle.v1.CommonLifecycleEvents.TAGS_LOADED.register((registries, client) -> LoaderHooks.fireTagsLoaded());
   }
 
   /** Registers the entries of the mod (in the order of the registries, as NeoForge does) and applies the loader hooks */
   public static synchronized void register(String modId) {
     if (REGISTERED.add(modId)) {
       List<Registrar<?>> registrars = new ArrayList<>(Registrar.of(modId));
-      // BuiltInRegistries.REGISTRY iterates in registration order; keySet of the root registry is not ordered
-      List<ResourceLocation> ordered = new ArrayList<>();
+      // NeoForge's order: attributes, data components and armor materials first (items need them), then the registries
+      // in creation order (BuiltInRegistries.REGISTRY iterates in it; the key set of the root registry is not ordered)
+      List<ResourceLocation> ordered = new ArrayList<>(List.of(net.minecraft.core.registries.Registries.ATTRIBUTE.location(),
+        net.minecraft.core.registries.Registries.DATA_COMPONENT_TYPE.location(), net.minecraft.core.registries.Registries.ARMOR_MATERIAL.location()));
       for (Registry<?> registry : BuiltInRegistries.REGISTRY) {
-        ordered.add(registry.key().location());
+        if (!ordered.contains(registry.key().location())) {
+          ordered.add(registry.key().location());
+        }
       }
       registrars.sort(Comparator.comparingInt(r -> {
         int index = ordered.indexOf(r.registryKey().location());
@@ -72,6 +77,7 @@ public class KilnworkFabric implements ModInitializer {
     for (Registrar.Entry<R, ? extends R> entry : registrar.getEntries()) {
       Registry.register(registry, (ResourceKey<R>) entry.getKey(), Registrar.create(entry));
     }
+    registrar.aliases().forEach((from, to) -> RegistryAliases.add(registrar.registryKey(), from, to));
   }
 
   private static void applyHooks() {
