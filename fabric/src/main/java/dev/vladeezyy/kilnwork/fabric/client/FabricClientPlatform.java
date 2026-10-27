@@ -9,35 +9,27 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.inventory.InventoryMenu;
-import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.world.level.material.Fluids;
 
 import javax.annotation.Nullable;
 
 /** {@link KilnworkClientPlatform} on Fabric: Fabric's fluid variant rendering */
 public class FabricClientPlatform implements KilnworkClientPlatform {
-  private static TextureAtlasSprite missing() {
-    return dev.vladeezyy.kilnwork.client.render.FluidCuboidRenderer.getBlockSprite(net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation());
-  }
-
-  private static TextureAtlasSprite[] sprites(FluidStack fluid) {
-    FluidVariant variant = fluid.isEmpty() ? FluidVariant.of(Fluids.WATER) : FluidAmounts.toVariant(fluid);
-    return FluidVariantRendering.getSprites(variant);
+  /** Since 26.1 the sprites come from the vanilla fluid model of the fluid state */
+  private static net.minecraft.client.renderer.block.FluidModel model(FluidStack fluid) {
+    net.minecraft.world.level.material.Fluid type = fluid.isEmpty() ? Fluids.WATER : fluid.getFluid();
+    return net.minecraft.client.Minecraft.getInstance().getModelManager().getFluidStateModelSet().get(type.defaultFluidState());
   }
 
   @Override
   public TextureAtlasSprite stillSprite(FluidStack fluid) {
-    TextureAtlasSprite[] sprites = sprites(fluid);
-    return sprites != null && sprites.length > 0 && sprites[0] != null ? sprites[0] : missing();
+    return model(fluid).stillMaterial().sprite();
   }
 
   @Override
   public TextureAtlasSprite flowingSprite(FluidStack fluid) {
-    TextureAtlasSprite[] sprites = sprites(fluid);
-    if (sprites != null && sprites.length > 1 && sprites[1] != null) {
-      return sprites[1];
-    }
-    return stillSprite(fluid);
+    return model(fluid).flowingMaterial().sprite();
   }
 
   @Override

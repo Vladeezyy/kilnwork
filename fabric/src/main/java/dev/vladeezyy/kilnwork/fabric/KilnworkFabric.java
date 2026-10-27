@@ -93,7 +93,7 @@ public class KilnworkFabric implements ModInitializer {
     List<LoaderHooks.ServerReloadListener> listeners = LoaderHooks.serverReloadListeners();
     for (; appliedReloadListeners < listeners.size(); appliedReloadListeners++) {
       LoaderHooks.ServerReloadListener listener = listeners.get(appliedReloadListeners);
-      net.fabricmc.fabric.api.resource.v1.DataResourceLoader.get().registerReloader(listener.id(), listener.factory());
+      net.fabricmc.fabric.api.resource.v1.DataResourceLoader.get().registerReloadListener(listener.id(), listener.factory());
     }
   }
 
@@ -106,7 +106,7 @@ public class KilnworkFabric implements ModInitializer {
 
   @SuppressWarnings("unchecked")
   private static <P extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> void registerPacketType(LoaderHooks.ClientboundPacket<P> packet) {
-    PayloadTypeRegistry.playS2C().register(packet.type(), (net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, P>) packet.codec());
+    PayloadTypeRegistry.clientboundPlay().register(packet.type(), (net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, P>) packet.codec());
   }
 
 }

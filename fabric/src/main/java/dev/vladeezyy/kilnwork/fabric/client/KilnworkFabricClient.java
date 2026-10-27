@@ -6,7 +6,7 @@ import dev.vladeezyy.kilnwork.platform.ClientLoaderHooks;
 import dev.vladeezyy.kilnwork.platform.LoaderHooks;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.gui.screens.Screen;
@@ -31,7 +31,7 @@ public class KilnworkFabricClient implements ClientModInitializer {
   @Override
   public void onInitializeClient() {
     KilnworkClient.init();
-    HudRenderCallback.EVENT.register((graphics, deltaTracker) -> KilnworkClient.renderGaugeTooltip(graphics));
+    HudElementRegistry.addLast(dev.vladeezyy.kilnwork.Kilnwork.id("gauge_tooltip"), (graphics, deltaTracker) -> KilnworkClient.renderGaugeTooltip(graphics));
     register();
   }
 
@@ -39,7 +39,7 @@ public class KilnworkFabricClient implements ClientModInitializer {
     List<LoaderHooks.ReloadListener> listeners = ClientLoaderHooks.reloadListeners();
     for (; appliedListeners < listeners.size(); appliedListeners++) {
       LoaderHooks.ReloadListener listener = listeners.get(appliedListeners);
-      ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloader(listener.id(), listener.listener());
+      ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(listener.id(), listener.listener());
     }
     List<ClientLoaderHooks.Renderer<?, ?>> renderers = ClientLoaderHooks.renderers();
     for (; appliedRenderers < renderers.size(); appliedRenderers++) {

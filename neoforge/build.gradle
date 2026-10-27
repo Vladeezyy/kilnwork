@@ -28,8 +28,8 @@ neoForge {
 }
 
 dependencies {
-    compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
-    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${jei_minecraft_version}-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${jei_minecraft_version}-neoforge-api:${jei_version}"
 }
 
 publishing {

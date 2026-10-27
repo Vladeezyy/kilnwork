@@ -31,7 +31,7 @@ public final class FluidCuboidRenderer {
   private FluidCuboidRenderer() {}
 
   /** Render type fluids are drawn with */
-  public static final RenderType RENDER_TYPE = RenderTypes.itemEntityTranslucentCull(TextureAtlas.LOCATION_BLOCKS);
+  public static final RenderType RENDER_TYPE = RenderTypes.entityTranslucentCullItemTarget(TextureAtlas.LOCATION_BLOCKS);
 
   /** Sprite of the block atlas */
   public static TextureAtlasSprite getBlockSprite(Identifier sprite) {

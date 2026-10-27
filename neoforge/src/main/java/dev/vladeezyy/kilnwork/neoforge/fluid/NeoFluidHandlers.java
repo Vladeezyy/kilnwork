@@ -31,7 +31,7 @@ public final class NeoFluidHandlers {
   }
 
   public static FluidStack toStack(FluidResource resource, int amount) {
-    return resource.isEmpty() || amount <= 0 ? FluidStack.EMPTY : new FluidStack(resource.getHolder(), amount, resource.getComponentsPatch());
+    return resource.isEmpty() || amount <= 0 ? FluidStack.EMPTY : new FluidStack(resource.typeHolder(), amount, resource.getComponentsPatch());
   }
 
   public static net.neoforged.neoforge.fluids.FluidStack toNeo(FluidStack stack) {

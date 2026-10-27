@@ -8,7 +8,7 @@ import dev.vladeezyy.kilnwork.client.model.RetexturedModelLoader;
 import dev.vladeezyy.kilnwork.client.model.RetexturedQuads;
 import dev.vladeezyy.kilnwork.platform.ClientLoaderHooks;
 import dev.vladeezyy.kilnwork.retexture.RetexturedBlock;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;

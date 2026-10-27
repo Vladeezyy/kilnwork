@@ -24,17 +24,7 @@ public final class KilnworkRegistries {
 
   /** Shaped crafting that takes the texture of one ingredient, {@code kilnwork:crafting_shaped_retextured} */
   public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<ShapedRetexturedRecipe>> SHAPED_RETEXTURED = RECIPE_SERIALIZERS.register("crafting_shaped_retextured",
-    () -> new RecipeSerializer<>() {
-      @Override
-      public com.mojang.serialization.MapCodec<ShapedRetexturedRecipe> codec() {
-        return ShapedRetexturedRecipe.CODEC;
-      }
-
-      @Override
-      public net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, ShapedRetexturedRecipe> streamCodec() {
-        return ShapedRetexturedRecipe.STREAM_CODEC;
-      }
-    });
+    () -> ShapedRetexturedRecipe.SERIALIZER);
 
   public static void register(IEventBus bus) {
     COMPONENTS.register(bus);

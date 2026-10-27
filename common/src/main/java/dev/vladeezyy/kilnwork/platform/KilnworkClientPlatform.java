@@ -3,7 +3,7 @@ package dev.vladeezyy.kilnwork.platform;
 import dev.vladeezyy.kilnwork.fluid.api.FluidStack;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 
 import javax.annotation.Nullable;
 import java.util.ServiceLoader;

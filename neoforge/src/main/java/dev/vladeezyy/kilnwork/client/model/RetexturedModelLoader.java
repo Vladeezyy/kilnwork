@@ -7,15 +7,15 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSyntaxException;
 import dev.vladeezyy.kilnwork.Kilnwork;
-import net.minecraft.client.renderer.block.model.BlockModel;
-import net.minecraft.client.renderer.block.model.TextureSlots;
+import net.minecraft.client.resources.model.cuboid.CuboidModel;
+import net.minecraft.client.renderer.block.dispatch.ModelState;
+import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.Material;
+import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ModelDebugName;
-import net.minecraft.client.resources.model.ModelState;
-import net.minecraft.client.resources.model.QuadCollection;
-import net.minecraft.client.resources.model.UnbakedGeometry;
+import net.minecraft.client.resources.model.geometry.QuadCollection;
+import net.minecraft.client.resources.model.geometry.UnbakedGeometry;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.GsonHelper;
@@ -40,15 +40,15 @@ public class RetexturedModelLoader implements UnbakedModelLoader<UnbakedModel> {
   @Override
   public UnbakedModel read(JsonObject json, JsonDeserializationContext context) throws JsonParseException {
     Set<String> names = getRetexturedNames(json);
-    BlockModel model = readVanilla(json, context);
+    CuboidModel model = readVanilla(json, context);
     return new Wrapped(model, new Geometry(model.geometry(), model.parent(), names));
   }
 
   /** The JSON read as a vanilla block model, without the loader key */
-  public static BlockModel readVanilla(JsonObject json, JsonDeserializationContext context) {
+  public static CuboidModel readVanilla(JsonObject json, JsonDeserializationContext context) {
     JsonObject copy = json.deepCopy();
     copy.remove("loader");
-    return context.deserialize(copy, BlockModel.class);
+    return context.deserialize(copy, CuboidModel.class);
   }
 
   /** Reads {@code "retextured"}: a texture name or a list of names */
@@ -115,7 +115,7 @@ public class RetexturedModelLoader implements UnbakedModelLoader<UnbakedModel> {
       for (String texture : names) {
         Material material = textures.getMaterial(texture);
         if (material != null) {
-          sprites.add(baker.sprites().get(material, name));
+          sprites.add(baker.materials().get(material, name).sprite());
         }
       }
       RetexturedQuads.markRetextured(quads, sprites);

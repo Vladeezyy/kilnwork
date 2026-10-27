@@ -68,7 +68,7 @@ public final class FluidTransferHelper {
   }
 
   private static void message(Player player, String key, FluidStack fluid) {
-    player.displayClientMessage(Component.translatable(Kilnwork.lang("block", key), FluidText.number(fluid.getAmount()), fluid.getHoverName()), true);
+    player.sendOverlayMessage(Component.translatable(Kilnwork.lang("block", key), FluidText.number(fluid.getAmount()), fluid.getHoverName()));
   }
 
   /** Plays the sound and shows the message for filling a tank */

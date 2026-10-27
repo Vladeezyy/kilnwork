@@ -11,7 +11,7 @@ import dev.vladeezyy.kilnwork.platform.KilnworkPlatform;
 import dev.vladeezyy.kilnwork.tag.KilnworkTags;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -40,18 +40,18 @@ public final class KilnworkClient {
   }
 
   /** Block models wrapped after baking, see {@link #wrapBlockModels}; the loader parts apply them */
-  private static final List<java.util.Map.Entry<java.util.function.Predicate<net.minecraft.world.level.block.Block>, java.util.function.Function<net.minecraft.client.renderer.block.model.BlockStateModel, net.minecraft.client.renderer.block.model.BlockStateModel>>> WRAPPERS = new ArrayList<>();
+  private static final List<java.util.Map.Entry<java.util.function.Predicate<net.minecraft.world.level.block.Block>, java.util.function.Function<net.minecraft.client.renderer.block.dispatch.BlockStateModel, net.minecraft.client.renderer.block.dispatch.BlockStateModel>>> WRAPPERS = new ArrayList<>();
 
   /**
    * Wraps the baked models of the matching blocks. Call during client setup; the first matching wrapper is used
    * (on NeoForge {@code RetexturedBlock}s get a {@code RetexturedBlockModel} unless an earlier registration matches).
    */
-  public static synchronized void wrapBlockModels(java.util.function.Predicate<net.minecraft.world.level.block.Block> blocks, java.util.function.Function<net.minecraft.client.renderer.block.model.BlockStateModel, net.minecraft.client.renderer.block.model.BlockStateModel> wrapper) {
+  public static synchronized void wrapBlockModels(java.util.function.Predicate<net.minecraft.world.level.block.Block> blocks, java.util.function.Function<net.minecraft.client.renderer.block.dispatch.BlockStateModel, net.minecraft.client.renderer.block.dispatch.BlockStateModel> wrapper) {
     WRAPPERS.add(0, java.util.Map.entry(blocks, wrapper));
   }
 
   /** The model wrappers in order, for the loader parts */
-  public static synchronized List<java.util.Map.Entry<java.util.function.Predicate<net.minecraft.world.level.block.Block>, java.util.function.Function<net.minecraft.client.renderer.block.model.BlockStateModel, net.minecraft.client.renderer.block.model.BlockStateModel>>> modelWrappers() {
+  public static synchronized List<java.util.Map.Entry<java.util.function.Predicate<net.minecraft.world.level.block.Block>, java.util.function.Function<net.minecraft.client.renderer.block.dispatch.BlockStateModel, net.minecraft.client.renderer.block.dispatch.BlockStateModel>>> modelWrappers() {
     return List.copyOf(WRAPPERS);
   }
 
@@ -62,7 +62,7 @@ public final class KilnworkClient {
   }
 
   /** Shows the fluid of a gauge or tank tagged in {@link KilnworkTags.Blocks#GAUGES} next to the crosshair; called by the loader's HUD hook */
-  public static void renderGaugeTooltip(GuiGraphics graphics) {
+  public static void renderGaugeTooltip(GuiGraphicsExtractor graphics) {
     Minecraft minecraft = Minecraft.getInstance();
     if (minecraft.screen != null && minecraft.screen.getClass() != ChatScreen.class) {
       return;

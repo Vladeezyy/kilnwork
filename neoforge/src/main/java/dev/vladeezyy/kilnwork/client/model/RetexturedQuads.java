@@ -2,9 +2,11 @@ package dev.vladeezyy.kilnwork.client.model;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.builders.UVPair;
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import com.mojang.blaze3d.platform.Transparency;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
+import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.QuadCollection;
+import net.minecraft.client.resources.model.geometry.QuadCollection;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Block;
 
@@ -53,7 +55,7 @@ public final class RetexturedQuads {
       return;
     }
     for (BakedQuad quad : quads.getAll()) {
-      if (sprites.contains(quad.sprite())) {
+      if (sprites.contains(quad.materialInfo().sprite())) {
         RETEXTURED.add(quad);
       }
     }
@@ -76,26 +78,42 @@ public final class RetexturedQuads {
     return GROUPS.getOrDefault(quad, -1);
   }
 
-  /** Sprite drawn for a texture block: its particle sprite */
-  public static TextureAtlasSprite spriteOf(Block block) {
-    return Minecraft.getInstance().getModelManager().getBlockModelShaper().getParticleIcon(block.defaultBlockState());
+  /** Material drawn for a texture block: its particle material */
+  public static Material.Baked materialOf(Block block) {
+    return Minecraft.getInstance().getModelManager().getBlockStateModelSet().getParticleMaterial(block.defaultBlockState());
   }
 
-  /** The quad with its UVs moved from its own sprite onto the given one */
+  /** Sprite drawn for a texture block: its particle sprite */
+  public static TextureAtlasSprite spriteOf(Block block) {
+    return materialOf(block).sprite();
+  }
+
+  /**
+   * The quad with its UVs moved from its own sprite onto the given one. Since 26.1 the layer (solid, cutout, translucent)
+   * comes from the sprite's pixels under the quad, so it is computed again for the new sprite.
+   */
   public static BakedQuad retexture(BakedQuad quad, TextureAtlasSprite sprite) {
-    TextureAtlasSprite old = quad.sprite();
+    BakedQuad.MaterialInfo info = quad.materialInfo();
+    TextureAtlasSprite old = info.sprite();
     if (old == sprite) {
       return quad;
     }
     long[] uv = new long[4];
+    float minU = 1, minV = 1, maxU = 0, maxV = 0;
     for (int i = 0; i < 4; i++) {
       long packed = quad.packedUV(i);
       float u = (UVPair.unpackU(packed) - old.getU0()) / (old.getU1() - old.getU0());
       float v = (UVPair.unpackV(packed) - old.getV0()) / (old.getV1() - old.getV0());
+      minU = Math.min(minU, u);
+      minV = Math.min(minV, v);
+      maxU = Math.max(maxU, u);
+      maxV = Math.max(maxV, v);
       uv[i] = UVPair.pack(sprite.getU(u), sprite.getV(v));
     }
+    Transparency transparency = info.layer().translucent() ? Transparency.TRANSLUCENT : sprite.contents().computeTransparency(minU, minV, maxU, maxV);
+    BakedQuad.MaterialInfo retextured = BakedQuad.MaterialInfo.of(new Material.Baked(sprite, false), transparency, info.tintIndex(), info.shade(), info.lightEmission(), info.ambientOcclusion());
     return new BakedQuad(quad.position0(), quad.position1(), quad.position2(), quad.position3(), uv[0], uv[1], uv[2], uv[3],
-      quad.tintIndex(), quad.direction(), sprite, quad.shade(), quad.lightEmission(), quad.bakedNormals(), quad.bakedColors(), quad.hasAmbientOcclusion());
+      quad.direction(), retextured, quad.bakedNormals(), quad.bakedColors());
   }
 
   /** Retextures the marked quads of the list, null keeps them */

@@ -24,7 +24,7 @@ public final class FluidAmounts {
         if (variant.isBlank() || amount <= 0) {
             return FluidStack.EMPTY;
         }
-        return new FluidStack(variant.getFluid().builtInRegistryHolder(), amount, variant.getComponents());
+        return new FluidStack(variant.getFluid().builtInRegistryHolder(), amount, variant.getComponentsPatch());
     }
 
     public static long toDroplets(int mb) {

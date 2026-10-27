@@ -10,7 +10,7 @@ neoForge {
 }
 
 dependencies {
-    compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${jei_minecraft_version}-common-api:${jei_version}"
 }
 
 configurations {

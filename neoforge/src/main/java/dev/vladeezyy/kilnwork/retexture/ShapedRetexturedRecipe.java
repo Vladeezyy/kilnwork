@@ -4,12 +4,13 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.vladeezyy.kilnwork.KilnworkRegistries;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -28,34 +29,31 @@ import java.util.stream.IntStream;
  */
 public class ShapedRetexturedRecipe extends ShapedRecipe {
   public static final MapCodec<ShapedRetexturedRecipe> CODEC = RecordCodecBuilder.mapCodec(inst -> inst.group(
-    Codec.STRING.optionalFieldOf("group", "").forGetter(ShapedRecipe::group),
-    CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.MISC).forGetter(ShapedRecipe::category),
+    Recipe.CommonInfo.MAP_CODEC.forGetter(r -> r.commonInfo),
+    CraftingRecipe.CraftingBookInfo.MAP_CODEC.forGetter(r -> r.bookInfo),
     ShapedRecipePattern.MAP_CODEC.forGetter(r -> r.pattern),
-    ItemStack.STRICT_CODEC.fieldOf("result").forGetter(r -> r.plainResult),
-    Codec.BOOL.optionalFieldOf("show_notification", true).forGetter(ShapedRecipe::showNotification),
+    ItemStackTemplate.CODEC.fieldOf("result").forGetter(r -> r.plainResult),
     Ingredient.CODEC.fieldOf("texture").forGetter(r -> r.texture),
     Codec.BOOL.optionalFieldOf("match_all", false).forGetter(r -> r.matchAll)
   ).apply(inst, ShapedRetexturedRecipe::new));
   public static final StreamCodec<RegistryFriendlyByteBuf, ShapedRetexturedRecipe> STREAM_CODEC = StreamCodec.composite(
-    ByteBufCodecs.STRING_UTF8, ShapedRecipe::group,
-    CraftingBookCategory.STREAM_CODEC, ShapedRecipe::category,
+    Recipe.CommonInfo.STREAM_CODEC, r -> r.commonInfo,
+    CraftingRecipe.CraftingBookInfo.STREAM_CODEC, r -> r.bookInfo,
     ShapedRecipePattern.STREAM_CODEC, r -> r.pattern,
-    ItemStack.STREAM_CODEC, r -> r.plainResult,
-    ByteBufCodecs.BOOL, ShapedRecipe::showNotification,
+    ItemStackTemplate.STREAM_CODEC, r -> r.plainResult,
     Ingredient.CONTENTS_STREAM_CODEC, r -> r.texture,
     ByteBufCodecs.BOOL, r -> r.matchAll,
     ShapedRetexturedRecipe::new);
+  public static final RecipeSerializer<ShapedRetexturedRecipe> SERIALIZER = new RecipeSerializer<>(CODEC, STREAM_CODEC);
 
-  private final ShapedRecipePattern pattern;
-  private final ItemStack plainResult;
+  private final ItemStackTemplate plainResult;
   private final Ingredient texture;
   private final boolean matchAll;
   private List<ItemStack> displayOutputs;
   private int[] textureSlots;
 
-  public ShapedRetexturedRecipe(String group, CraftingBookCategory category, ShapedRecipePattern pattern, ItemStack result, boolean showNotification, Ingredient texture, boolean matchAll) {
-    super(group, category, pattern, result, showNotification);
-    this.pattern = pattern;
+  public ShapedRetexturedRecipe(Recipe.CommonInfo commonInfo, CraftingRecipe.CraftingBookInfo bookInfo, ShapedRecipePattern pattern, ItemStackTemplate result, Ingredient texture, boolean matchAll) {
+    super(commonInfo, bookInfo, pattern, result);
     this.plainResult = result;
     this.texture = texture;
     this.matchAll = matchAll;
@@ -73,12 +71,12 @@ public class ShapedRetexturedRecipe extends ShapedRecipe {
 
   /** Result without a texture */
   public ItemStack getPlainOutput() {
-    return plainResult;
+    return plainResult.create();
   }
 
   @Override
-  public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
-    ItemStack result = super.assemble(input, registries);
+  public ItemStack assemble(CraftingInput input) {
+    ItemStack result = super.assemble(input);
     Block current = null;
     for (int i = 0; i < input.size(); i++) {
       ItemStack stack = input.getItem(i);
@@ -106,9 +104,11 @@ public class ShapedRetexturedRecipe extends ShapedRecipe {
     return current != null ? RetexturedHelper.setTexture(result, current) : result;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
-  public RecipeSerializer<ShapedRetexturedRecipe> getSerializer() {
-    return KilnworkRegistries.SHAPED_RETEXTURED.get();
+  public RecipeSerializer<ShapedRecipe> getSerializer() {
+    // the serializer makes this subclass, vanilla's return type names the parent
+    return (RecipeSerializer<ShapedRecipe>)(RecipeSerializer<?>)KilnworkRegistries.SHAPED_RETEXTURED.get();
   }
 
   /** Every textured result, for recipe viewers */
@@ -118,10 +118,10 @@ public class ShapedRetexturedRecipe extends ShapedRecipe {
         .map(holder -> Block.byItem(holder.value()))
         .filter(block -> block != Blocks.AIR)
         .distinct()
-        .map(block -> RetexturedHelper.setTexture(plainResult.copy(), block))
+        .map(block -> RetexturedHelper.setTexture(plainResult.create(), block))
         .toList();
       if (displayOutputs.isEmpty()) {
-        displayOutputs = List.of(plainResult);
+        displayOutputs = List.of(plainResult.create());
       }
     }
     return displayOutputs;

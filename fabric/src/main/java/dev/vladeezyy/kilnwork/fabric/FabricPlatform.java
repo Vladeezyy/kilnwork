@@ -9,11 +9,11 @@ import dev.vladeezyy.kilnwork.fluid.api.IFluidHandler;
 import dev.vladeezyy.kilnwork.fluid.api.IFluidHandlerItem;
 import dev.vladeezyy.kilnwork.platform.KilnworkPlatform;
 import io.netty.buffer.Unpooled;
-import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
+import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
-import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
+import net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider;
+import net.fabricmc.fabric.api.menu.v1.ExtendedMenuType;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
@@ -137,7 +137,7 @@ public class FabricPlatform implements KilnworkPlatform {
 
   @Override
   public <M extends AbstractContainerMenu> MenuType<M> menuType(MenuFactory<M> factory) {
-    return new ExtendedScreenHandlerType<M, byte[]>((id, inventory, data) -> factory.create(id, inventory, buffer(inventory, data)), ByteBufCodecs.BYTE_ARRAY);
+    return new ExtendedMenuType<M, byte[]>((id, inventory, data) -> factory.create(id, inventory, buffer(inventory, data)), ByteBufCodecs.BYTE_ARRAY);
   }
 
   private static RegistryFriendlyByteBuf buffer(Inventory inventory, byte[] data) {
@@ -150,7 +150,7 @@ public class FabricPlatform implements KilnworkPlatform {
     extraData.accept(buf);
     byte[] data = new byte[buf.readableBytes()];
     buf.readBytes(data);
-    player.openMenu(new ExtendedScreenHandlerFactory<byte[]>() {
+    player.openMenu(new ExtendedMenuProvider<byte[]>() {
       @Override
       public byte[] getScreenOpeningData(ServerPlayer opener) {
         return data;
@@ -183,6 +183,6 @@ public class FabricPlatform implements KilnworkPlatform {
 
   @Override
   public CreativeModeTab.Builder creativeTab() {
-    return FabricItemGroup.builder();
+    return FabricCreativeModeTab.builder();
   }
 }

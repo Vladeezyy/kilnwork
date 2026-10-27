@@ -134,7 +134,7 @@ public class NeoForgePlatform implements KilnworkPlatform {
 
   @Override
   public void sendToTracking(ServerLevel level, BlockPos pos, CustomPacketPayload payload) {
-    PacketDistributor.sendToPlayersTrackingChunk(level, new ChunkPos(pos), payload);
+    PacketDistributor.sendToPlayersTrackingChunk(level, ChunkPos.containing(pos), payload);
   }
 
   @Override
