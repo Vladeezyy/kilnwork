@@ -111,7 +111,7 @@ public final class RetexturedQuads {
       uv[i] = UVPair.pack(sprite.getU(u), sprite.getV(v));
     }
     Transparency transparency = info.layer().translucent() ? Transparency.TRANSLUCENT : sprite.contents().computeTransparency(minU, minV, maxU, maxV);
-    BakedQuad.MaterialInfo retextured = BakedQuad.MaterialInfo.of(new Material.Baked(sprite, false), transparency, info.tintIndex(), info.shade(), info.lightEmission(), info.ambientOcclusion());
+    BakedQuad.MaterialInfo retextured = BakedQuad.MaterialInfo.of(new Material.Baked(sprite, false), transparency, info.tintIndex(), info.shadeDirectionOverride(), info.lightEmission(), info.ambientOcclusion());
     return new BakedQuad(quad.position0(), quad.position1(), quad.position2(), quad.position3(), uv[0], uv[1], uv[2], uv[3],
       quad.direction(), retextured, quad.bakedNormals(), quad.bakedColors());
   }

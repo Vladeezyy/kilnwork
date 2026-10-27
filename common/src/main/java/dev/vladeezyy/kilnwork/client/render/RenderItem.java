@@ -64,10 +64,10 @@ public record RenderItem(Vector3fc center, float size, int x, int y, ItemDisplay
     float scale = size / 16f;
     matrices.scale(scale, scale, scale);
     if (x != 0) {
-      matrices.mulPose(Axis.XP.rotationDegrees(x));
+      matrices.rotateDegrees(Axis.XP, x);
     }
     if (y != 0) {
-      matrices.mulPose(Axis.YP.rotationDegrees(y));
+      matrices.rotateDegrees(Axis.YP, y);
     }
     item.submit(matrices, collector, light, OverlayTexture.NO_OVERLAY, 0);
     matrices.popPose();
@@ -87,7 +87,7 @@ public record RenderItem(Vector3fc center, float size, int x, int y, ItemDisplay
     }
     matrices.pushPose();
     matrices.translate(0.5, 0, 0.5);
-    matrices.mulPose(Axis.YP.rotationDegrees(-90f * facing.get2DDataValue()));
+    matrices.rotateDegrees(Axis.YP, -90f * facing.get2DDataValue());
     matrices.translate(-0.5, 0, -0.5);
     return true;
   }
