@@ -3,7 +3,6 @@ package dev.vladeezyy.kilnwork.fluid;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
-import net.minecraft.core.RegistryAccess;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.vladeezyy.kilnwork.Kilnwork;
 import dev.vladeezyy.kilnwork.tag.TagPreference;
@@ -42,7 +41,7 @@ public class ItemFluidTransfers extends SimpleJsonResourceReloadListener<JsonEle
 
   private List<Transfer> transfers = List.of();
   /** Registries for parsing, since 1.21.2 ingredients are holder sets and need registry ops */
-  private net.minecraft.core.HolderLookup.Provider registries = RegistryAccess.EMPTY;
+  private net.minecraft.core.HolderLookup.Provider registries = net.minecraft.core.RegistryAccess.EMPTY;
 
   private ItemFluidTransfers() {
     super(net.minecraft.util.ExtraCodecs.JSON, net.minecraft.resources.FileToIdConverter.json("kilnwork/fluid_transfer"));

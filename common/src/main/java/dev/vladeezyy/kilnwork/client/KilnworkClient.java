@@ -64,10 +64,10 @@ public final class KilnworkClient {
   /** Shows the fluid of a gauge or tank tagged in {@link KilnworkTags.Blocks#GAUGES} next to the crosshair; called by the loader's HUD hook */
   public static void renderGaugeTooltip(GuiGraphicsExtractor graphics) {
     Minecraft minecraft = Minecraft.getInstance();
-    if (minecraft.screen != null && minecraft.screen.getClass() != ChatScreen.class) {
+    if (minecraft.gui.screen() != null && minecraft.gui.screen().getClass() != ChatScreen.class) {
       return;
     }
-    if (minecraft.level == null || minecraft.options.hideGui || !(minecraft.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) {
+    if (minecraft.level == null || minecraft.gui.hud.isHidden() || !(minecraft.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) {
       return;
     }
     BlockPos pos = hit.getBlockPos();
