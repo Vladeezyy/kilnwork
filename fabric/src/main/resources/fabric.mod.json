@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${mod_version}",
+  "name": "${mod_name}",
+  "description": "Library mod for Vladeezyy's ports: block registration helpers, fluid gauges, fluid rendering in block entities and data driven fluid shapes.",
+  "authors": ["${mod_authors}"],
+  "contributors": ["Built from the parts of Mantle by SlimeKnights (MIT) that Ceramics needs"],
+  "contact": {
+    "sources": "https://github.com/Vladeezyy/kilnwork",
+    "issues": "https://github.com/Vladeezyy/kilnwork/issues"
+  },
+  "license": "${mod_license}",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.vladeezyy.kilnwork.fabric.KilnworkFabric"],
+    "client": ["dev.vladeezyy.kilnwork.fabric.client.KilnworkFabricClient"]
+  },
+  "mixins": ["kilnwork.mixins.json"],
+  "accessWidener": "kilnwork.accesswidener",
+  "depends": {
+    "fabricloader": ">=${fabric_loader_version}",
+    "fabric-api": ">=${fabric_version}",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=${java_version}"
+  }
+}

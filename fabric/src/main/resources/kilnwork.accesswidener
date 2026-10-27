@@ -1,0 +1,5 @@
+accessWidener v2 named
+# Opened by NeoForge itself (common/accesstransformer.cfg); transitive, so mods built on Kilnwork see them too
+transitive-accessible class net/minecraft/client/gui/screens/MenuScreens$ScreenConstructor
+transitive-accessible method net/minecraft/world/level/block/StairBlock <init> (Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/state/BlockBehaviour$Properties;)V
+transitive-accessible field net/minecraft/world/item/BucketItem content Lnet/minecraft/world/level/material/Fluid;

@@ -15,3 +15,6 @@ src/generated/resources/.cache/
 build-*.txt
 prodtest/result-*.txt
 build-*.txt
+
+/buildSrc/.gradle
+/buildSrc/build
