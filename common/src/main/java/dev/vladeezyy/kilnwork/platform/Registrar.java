@@ -65,6 +65,11 @@ public final class Registrar<R> {
     return (Entry) register(name, () -> (R) factory.apply(properties.get().setId(key)));
   }
 
+  /** A plain item with default properties */
+  public Entry<Item, Item> registerSimpleItem(String name) {
+    return registerSimpleItem(name, Item.Properties::new);
+  }
+
   /** A plain item (NeoForge's DeferredRegister.Items#registerSimpleItem) */
   public Entry<Item, Item> registerSimpleItem(String name, Supplier<Item.Properties> properties) {
     return registerItem(name, Item::new, properties);
