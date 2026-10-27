@@ -62,7 +62,7 @@ public class KilnworkNeoForge {
     bus.addListener(KilnworkNeoForge::registerCapabilities);
     bus.addListener(KilnworkNeoForge::registerPayloads);
     NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.event.TagsUpdatedEvent.class, event -> LoaderHooks.fireTagsLoaded());
-    NeoForge.EVENT_BUS.addListener(AddServerReloadListenersEvent.class, event -> LoaderHooks.serverReloadListeners().forEach(listener -> event.addListener(listener.id(), listener.factory().apply(event.getRegistryAccess()))));
+    NeoForge.EVENT_BUS.addListener(AddServerReloadListenersEvent.class, event -> LoaderHooks.serverReloadListeners().forEach(listener -> event.addListener(listener.id(), listener.factory().apply(event.getServerResources().fullRegistries().lookup()))));
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
